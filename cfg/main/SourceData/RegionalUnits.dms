@@ -1,0 +1,15 @@
+container RegionalUnits : using = "geometries"
+{ 
+	unit<uint32> Country 
+	: StorageName = "%NetworkModelDataDir%/Regions/CNTR_RG_01M_2020_3035.shp"
+	, StorageType = "gdal.vect"
+	, StorageReadOnly = "true"
+	{
+		attribute<LambertEA> geometry (poly);
+		attribute<bool>      IsEU            := EU_STAT == 'T'; 
+		attribute<bool>      IsEFTA          := EFTA_STAT == 'T'; 
+		attribute<bool>      IsCC            := CC_STAT == 'T'; 
+		attribute<bool>      IsTerritory       := strcount(SVRG_UN, 'Territory') > 0; 
+		unit<uint32> Subset := select_with_attr_by_cond(.,name_engl == /ModelParameters/OD_SelectionCountry);
+	}
+}

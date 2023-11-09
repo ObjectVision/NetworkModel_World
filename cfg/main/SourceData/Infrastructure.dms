@@ -1,0 +1,46 @@
+container Infrastructure : using = "geometries;units"
+{  
+	container OSM
+	{	
+		parameter<string> file_date := '20231109';
+		parameter<string> dir       := '%NetworkModelWorld_DataDir%/Infrastructure/OSM/'+file_date;
+		parameter<string> date      := 'latest';
+		unit<uint32>      Regios    := ModelParameters/Advanced/OSM_Regios;
+	
+		container Per_Continent :=
+			for_each_ne(
+				Regios/name
+				, 'Per_Continent_T('+quote(Regios/label)+')'
+			);
+		
+		Template Per_Continent_T
+		{
+			parameter<string> Regio;
+			///
+			
+			parameter<string> Generate_Lines_FSS := 'Lines', ExplicitSuppliers = "Make_lines_fss";
+			
+			container Read_Roads_pbf
+			:	StorageName     = "= dir + '/'+Regio+'-'+date+'.osm.pbf'" 
+			,	StorageType     = "gdal.vect"
+			,	StorageReadOnly = "True"
+			, 	SyncMode        = "AllTables"
+			, 	DialogData      = "wgs84";
+			
+			unit<uint32> Make_lines_fss := select_with_attr_by_cond(Read_Roads_pbf/lines, IsDefined(Read_Roads_pbf/lines/geometry))
+			,   StorageName = "='%LocalDataProjDir%/RegionFiles/'+Regio+'/Prep/'+file_date+'_Lines.fss'";
+			
+			unit<uint32> Read_lines_fss 
+			:   StorageName = "='%LocalDataProjDir%/RegionFiles/'+Regio+'/Prep/'+file_date+'_Lines.fss'"
+			,	StorageReadOnly = "True"
+			{
+				attribute<wgs84>                        geometry (arc);
+				attribute<string>                       highway;
+				attribute<int32>                        z_order;
+				attribute<classifications/OSM/roadtype> roadtype                   := rlookup(highway, classifications/OSM/roadtype/name);  
+			}
+			
+			unit<uint32> Roads := select_with_attr_by_cond(Read_lines_fss, IsDefined(Read_lines_fss/roadtype));
+		}
+	}
+}

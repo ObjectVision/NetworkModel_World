@@ -1,0 +1,26 @@
+container SourceData: Using = "Units;Classifications;geometries"
+{
+	#include<Infrastructure.dms>
+	#include<RegionalUnits.dms>
+	
+	container Locations
+	{
+		unit<uint32> towns
+		: StorageName = "%NetworkModelWorld_DataDir%/Locations/GHS_SMOD_E2020_GLOBE_R2023A_54009_1000_UC_DUC_SDUC_RC_V1_0/SMOD_V1s6_opr_P2023_v1_2020_labelDUC_DB.shp"
+		, StorageType = "gdal.vect"
+		, DialogData  = "WorldMollweide"
+		, StorageReadOnly = "TRUE"
+		{
+			attribute<WorldMollweide> geometry    (poly);
+			attribute<WGS84>          geometry_LL (poly) := geometry[WGS84];
+		}
+		
+		
+		
+		
+		// SMOD_V1s6_opr_P2023_v1_2020_labelRC_DB -> villages -> degurba klasse 13
+		// SMOD_V1s6_opr_P2023_v1_2020_labelSDUC_DB -> semi-dense towns -> degurba klasse 22
+		// SMOD_V1s6_opr_P2023_v1_2020_labelDUC_DB -> towns -> degurba klasse 23
+		// SMOD_V1s6_opr_P2023_v1_2020_labelUC_DB -> cities -> degurba klasse 30
+	}
+}
