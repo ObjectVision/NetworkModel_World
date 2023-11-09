@@ -1,14 +1,12 @@
 container NetworkSetup : using = "units;geometries;SourceData;Classifications"
 {
-	// unit<uint32> Dest_populated_grid := ='select_with_attr_by_cond(Geometries/Base_grid_'+ModelParameters/DestGridsize+'/points, Geometries/Base_grid_'+ModelParameters/DestGridsize+'/points/population > 0)';
-
 	container Per_Continent :=
 		for_each_ne(
 			ModelParameters/Advanced/OSM_Regios/name
 			,'Call_CreateNetwork_T(
 				'+quote(ModelParameters/Advanced/OSM_Regios/label)+
-				',Geometries/Base_grid_'+ModelParameters/OrgGridsize+'/points'  //orgs
-				',Dest_populated_grid'
+				',/SourceData/Settlements/cities'  //orgs
+				',/SourceData/Settlements/cities'	//dests
 			')'
 		);
 	
@@ -26,10 +24,5 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications"
 				, dest
 				, RoadDomain_src
 			);
-		
-		
-		// parameter<string> Generator_Network1         := 'Ready', ExplicitSuppliers = "NetwerkSpec/CreateInitialWorkingNetwork/LinkSet_Write";
-		// parameter<string> Generator_Network2         := 'Ready', ExplicitSuppliers = "NetwerkSpec/CreateMoreEfficientNetwork/FinalNodeSet_Write;NetwerkSpec/CreateMoreEfficientNetwork/FinalLinkSet_Write";
-		// parameter<string> Export_Cleaned_RoadNetwork := 'Ready', explicitsuppliers = "NetwerkSpec/CreateMoreEfficientNetwork/FinalLinkset/store/store";
 	}
 }

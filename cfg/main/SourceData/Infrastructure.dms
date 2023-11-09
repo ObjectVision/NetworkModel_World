@@ -36,11 +36,37 @@ container Infrastructure : using = "geometries;units"
 			{
 				attribute<wgs84>                        geometry (arc);
 				attribute<string>                       highway;
+				attribute<string>                       other_tags;
 				attribute<int32>                        z_order;
-				attribute<classifications/OSM/roadtype> roadtype                   := rlookup(highway, classifications/OSM/roadtype/name);  
+				attribute<classifications/OSM/roadtype> roadtype_rel   := rlookup(highway, classifications/OSM/roadtype/name);
+				
+				
+				attribute<bool>                       IsOneDirection    := strcount(other_tags, '"oneway"=>"yes"') > 0;
+				
+				unit<uint8> MaxSpeeds : nrofrows = 15
+				{
+					attribute<string> name  := 's'+speed;
+					attribute<string> speed : ['10','20','30','40','50','60','70','80','90','100','110','120','130','140','150'];
+					attribute<string> expr  := '"maxspeed"=>"'+speed+'"';
+					attribute<string> label := name;
+				}
+				
+				container ExtractMaxSpeeds :=
+					for_each_nedv(
+						MaxSpeeds/name
+						, 'strcount(other_tags, '+quote(MaxSpeeds/expr)+')'
+						, .
+						, uint32
+					);
+				attribute<MaxSpeeds>                       KPH_from_source_rel    := ='argmax_ifdefined_uint8('+AsItemList('ExtractMaxSpeeds/'+MaxSpeeds/name+' > 0 ? ExtractMaxSpeeds/'+MaxSpeeds/name+' : null_u')+')';
+				attribute<km_hr>                           KPH_from_source        := value(MaxSpeeds/speed, km_hr)[KPH_from_source_rel];
 			}
 			
-			unit<uint32> Roads := select_with_attr_by_cond(Read_lines_fss, IsDefined(Read_lines_fss/roadtype));
+			unit<uint32> Roads := select_with_attr_by_cond(Read_lines_fss, IsDefined(Read_lines_fss/roadtype_rel))
+			{
+				attribute<bool>  Connectable    := roadtype_rel != Classifications/OSM/roadtype/V/motorway && roadtype_rel != Classifications/OSM/roadtype/V/motorway_link;
+				attribute<km_hr> KPH            := MakeDefined(KPH_from_source, Classifications/OSM/roadtype/CarSpeedOutside[roadtype_rel]);
+			}
 		}
 	}
 }

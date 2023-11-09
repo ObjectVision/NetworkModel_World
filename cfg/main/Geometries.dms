@@ -1,5 +1,8 @@
-container Geometries
+container Geometries : using = "units"
 {
+	unit<dpoint> BaseProjection    := WGS84;
+	unit<ipoint> BaseProjection_ip := gridset(BaseProjection, point(1d, 1d), point(0d, 0d), ipoint);
+	
 	#include <wms_layer_latlong.dms>
 	unit<dpoint> WorldMollweide    : SpatialReference = "ESRI:54009";
 	unit<dpoint> WebMercator_base : SpatialReference = "EPSG:3857";
@@ -92,8 +95,39 @@ container Geometries
 	container Get_grid_50km := GetGrid_T(50);
 	
  */	
+ 
+	parameter<float64> SourceRasterFactor    := 0.00833333333333333333333333333333333333333333333333333333333;//http://mantis.objectvision.nl/view.php?id=1313
+	parameter<km> lengthdegree := 40000[km] / 360d; // 40075.017d/360d;//at Equator
 	
-	Template GetGrid_T
+	unit<wpoint> Base_grid_base :=
+		gridset(
+			range(WGS84, 
+				LowerBound(WGS84) + point(0.5 * SourceRasterFactor, 0.5 * SourceRasterFactor, WGS84), 
+				UpperBound(WGS84) - point(0.5 * SourceRasterFactor, 0.5 * SourceRasterFactor, WGS84)
+			)
+			, point(-SourceRasterFactor, SourceRasterFactor, WGS84)
+			, point(90d, -180d, WGS84)
+			, wpoint
+		), DialogData = "WGS84";
+ 
+	unit<wpoint> Base_grid     := TiledUnit(point(1024w, 43200w, Base_grid_base))
+	{
+		unit<uint16> rowset := range(uint16, pointrow(Lowerbound(.)), pointrow(Upperbound(.)));
+		unit<uint16> colset := range(uint16, pointcol(Lowerbound(.)), pointcol(Upperbound(.)));
+		
+		attribute<BaseProjection>       point            := mapping(Base_grid, BaseProjection);
+		attribute<Base_grid_spoint>     Base_grid_spoint_rel     := point[Base_grid_spoint];
+	}
+	
+	unit<spoint> Base_grid_spoint  := gridset(
+												 BaseProjection                         // the baseunit in which the coordinates of the coordinate system are expressed;
+												,GetProjectionFactor(Base_grid)     // the size of the grid cells in both X and Y directions, expressed in the base unit;
+												,GetProjectionOffSet(Base_grid)     // the offset, the coordinates of the top left coordinate, expressed in the base unit;
+												,spoint                                 // the value type of the resulting domain unit (in earlier versions the value type was configured as string, this is not supported anymore)
+											);
+ 
+	
+/* 	Template GetGrid_T
 	{
 		parameter<uint32> Gridsize;
 		////
@@ -134,4 +168,4 @@ container Geometries
 			}
 		}
 	}
-}
+ */}

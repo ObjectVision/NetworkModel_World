@@ -1,3 +1,41 @@
 container Analyses: Using = "Units;Classifications;geometries;sourcedata" 
 {  
+	unit<uint32>      Regios    := ModelParameters/Advanced/OSM_Regios;
+	
+	container Per_Continent :=
+		for_each_ne(
+			ModelParameters/Advanced/OSM_Regios/name
+			,'Traveltime_PerContinent_T(
+				'+quote(ModelParameters/Advanced/OSM_Regios/label)+
+				',/SourceData/Settlements/cities'  //orgs
+				',/SourceData/Settlements/cities'	//dests
+				',/NetworkSetup/Per_Continent/'+ModelParameters/Advanced/OSM_Regios/label+'/NetwerkSpec'
+			')'
+		);
+	
+	Template Traveltime_PerContinent_T
+	{
+		parameter<string> Continent_name;
+		unit<uint32>      Org;
+		unit<uint32>      Dest;
+		container         NetwerkSpec;
+		///
+
+		unit<uint32> FinalLinkSet := NetwerkSpec/CreateMoreEfficientNetwork/FinalLinkSet;
+		unit<uint32> FinalNodeSet := NetwerkSpec/CreateMoreEfficientNetwork/FinalNodeSet;
+		
+		unit<uint64> OD_matrix :=
+			impedance_matrix_od64('bidirectional(link_flag);startPoint(Node_rel);endPoint(Node_rel);cut(OrgZone_max_imp);od:impedance,OrgZone_rel,DstZone_rel'
+				, FinalLinkSet/impedance
+				, FinalLinkSet/F1
+				, FinalLinkSet/F2
+				
+				, !FinalLinkSet/IsOneDirection
+				// , FinalNodeSet/OrgNode_rel, NetwerkSpec/OrgLocations_spoint //startPoint(Node_rel,OrgZone_loc)
+				// , FinalNodeSet/DestNode_rel, NetwerkSpec/destLocations_spoint //endPoint(Node_rel,DstZone_loc)
+				, FinalNodeSet/OrgNode_rel //startPoint(Node_rel,OrgZone_loc)
+				, FinalNodeSet/DestNode_rel //endPoint(Node_rel,DstZone_loc)
+				, convert(ModelParameters/MaxTravelTime, s_f) //cut impedance
+			);
+	}
 }
