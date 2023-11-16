@@ -1,7 +1,7 @@
 container Geometries : using = "units"
 {
 	unit<dpoint> BaseProjection    := WGS84;
-	unit<ipoint> BaseProjection_ip := gridset(BaseProjection, point(1d, 1d), point(0d, 0d), ipoint);
+	unit<ipoint> BaseProjection_ip := gridset(BaseProjection,  point(0.001d, 0.001d), point(0.0d, 0.0d), ipoint); 
 	
 	#include <wms_layer_latlong.dms>
 	unit<dpoint> WorldMollweide    : SpatialReference = "ESRI:54009";

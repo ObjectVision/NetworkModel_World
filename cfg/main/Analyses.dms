@@ -1,17 +1,27 @@
 container Analyses: Using = "Units;Classifications;geometries;sourcedata" 
 {  
-	unit<uint32>      Regios    := ModelParameters/Advanced/OSM_Regios;
-	
-	container Per_Continent :=
+	container Per_SettlementType :=
 		for_each_ne(
-			ModelParameters/Advanced/OSM_Regios/name
-			,'Traveltime_PerContinent_T(
-				'+quote(ModelParameters/Advanced/OSM_Regios/label)+
-				',/SourceData/Settlements/cities'  //orgs
-				',/SourceData/Settlements/cities'	//dests
-				',/NetworkSetup/Per_Continent/'+ModelParameters/Advanced/OSM_Regios/label+'/NetwerkSpec'
-			')'
+			SettlementTypes/name
+			,'Per_SettlementType_T('+quote(SettlementTypes/name)+')'
 		);
+		
+	Template Per_SettlementType_T
+	{
+		parameter<string> SettlementType_name;
+		///
+
+		container Per_Continent :=
+			for_each_ne(
+				continents/name
+				,'Traveltime_PerContinent_T(
+					'+quote(continents/label)+
+					',/NetworkSetup/Per_SettlementType/'+SettlementType_name+'/OrgDest_Per_Continent/'+continents/label+'/select'  //orgs
+					',/NetworkSetup/Per_SettlementType/'+SettlementType_name+'/OrgDest_Per_Continent/'+continents/label+'/select'  //dests
+					',/NetworkSetup/Per_SettlementType/'+SettlementType_name+'/Per_Continent/'+continents/label+'/NetwerkSpec'
+				')'
+			);
+	}
 	
 	Template Traveltime_PerContinent_T
 	{
@@ -31,8 +41,6 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata"
 				, FinalLinkSet/F2
 				
 				, !FinalLinkSet/IsOneDirection
-				// , FinalNodeSet/OrgNode_rel, NetwerkSpec/OrgLocations_spoint //startPoint(Node_rel,OrgZone_loc)
-				// , FinalNodeSet/DestNode_rel, NetwerkSpec/destLocations_spoint //endPoint(Node_rel,DstZone_loc)
 				, FinalNodeSet/OrgNode_rel //startPoint(Node_rel,OrgZone_loc)
 				, FinalNodeSet/DestNode_rel //endPoint(Node_rel,DstZone_loc)
 				, convert(ModelParameters/MaxTravelTime, s_f) //cut impedance
