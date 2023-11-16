@@ -1,6 +1,5 @@
 container NetworkSetup : using = "units;geometries;SourceData;Classifications"
 {
-	
 	container Per_SettlementType :=
 		for_each_ne(
 			SettlementTypes/name

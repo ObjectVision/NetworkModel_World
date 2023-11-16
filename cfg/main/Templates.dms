@@ -10,11 +10,13 @@ container Templates: Using = "Units;Classifications;geometries"
 
 		unit<uint32> OrgDomain := OrgDomain0
 		{
+			attribute<BaseProjection>  geometry            := OrgDomain0/centroid;
 			attribute<UniqueLocations> UniqueLocations_rel := rlookup(ipoint(centroid), ipoint(UniqueLocations/geometry));
 		}
 		
 		unit<uint32> DestDomain := DestDomain0
 		{
+			attribute<BaseProjection>  geometry            := DestDomain0/centroid;
 			attribute<UniqueLocations> UniqueLocations_rel := rlookup(ipoint(centroid), ipoint(UniqueLocations/geometry));
 		}
 		
@@ -63,8 +65,10 @@ container Templates: Using = "Units;Classifications;geometries"
 				container Connectiveness := Templates/Check_Connectiveness_T(.,UqGeomPointSet, F1, F2);
 				attribute<BaseProjection> geometry(arc) := points2sequence(PointSet/geometry, convert(id(PointSet) % #., .));
 			}
+			
+			unit<uint32> Roads_Connected := select_with_attr_by_cond(Roads, Roads/Connectiveness/IsVerbonden);
 		
-			unit<uint32> LinkSet := connect_ne(Roads/geometry, uint32(Roads/Connectable), UniqueLocations/geometry, const(0, UniqueLocations))
+			unit<uint32> LinkSet := connect_ne(Roads_Connected/geometry, uint32(Roads_Connected/Connectable), UniqueLocations/geometry, const(0, UniqueLocations))
 			{
 				attribute<km_hr>           KPH                  := MakeDefined(arc_rel->KPH, ModelParameters/Advanced/CarDefaultSpeed_low);
 				attribute<bool>            IsOneDirection       := arc_rel->IsOneDirection;

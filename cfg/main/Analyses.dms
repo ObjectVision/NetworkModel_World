@@ -41,8 +41,8 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata"
 				, FinalLinkSet/F2
 				
 				, !FinalLinkSet/IsOneDirection
-				, FinalNodeSet/OrgNode_rel //startPoint(Node_rel,OrgZone_loc)
-				, FinalNodeSet/DestNode_rel //endPoint(Node_rel,DstZone_loc)
+				, FinalNodeSet/OrgNode_rel 
+				, FinalNodeSet/DestNode_rel 
 				, convert(ModelParameters/MaxTravelTime, s_f) //cut impedance
 			);
 	}
