@@ -107,7 +107,6 @@ container SourceData: Using = "Units;Classifications;geometries"
 				{
 					attribute<WGS84>          centroid           := CalcPopCentroids/CalcPopCentroids/geometry;
 					attribute<int32>          ID                 := ='Settlements/'+SettlementType_name+'/ID';
-					// attribute<Continents>     continent_rel      := ='point_in_polygon(rjoin(ID, CalcCentroids/read/'+SettlementType_name+'/type/id, CalcCentroids/read/'+SettlementType_name+'/type/centroid), continents/geometry)';
 					attribute<Continents>     continent_rel      := ='point_in_polygon(centroid, continents/geometry)';
 
 					container CalcPopCentroids := CalcPopCentroids_T(.), DisableStorage = "TRUE";
