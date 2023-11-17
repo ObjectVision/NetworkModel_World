@@ -1,0 +1,53 @@
+container NetworkSetup : using = "units;geometries;SourceData;Classifications"
+{
+	container Per_SettlementType :=
+		for_each_ne(
+			SettlementTypes/name
+			,'Per_SettlementType_T('+quote(SettlementTypes/name)+')'
+		);
+		
+	Template Per_SettlementType_T
+	{
+		parameter<string> SettlementType_name;
+		///
+		
+		container Per_Continent :=
+			for_each_ne(
+				Continents/name
+				,'Call_CreateNetwork_T(
+					'+quote(Continents/label)+
+					',OrgDest_Per_Continent/'+Continents/name+'/Select'  //orgs
+					',OrgDest_Per_Continent/'+Continents/name+'/Select'  //dests
+				')'
+			);
+		
+		container OrgDest_Per_Continent :=
+			for_each_ne(
+				Continents/name
+				, 'OrgsDest_Per_Continent_T('+quote(Continents/name)+')'
+			);
+			
+		Template OrgsDest_Per_Continent_T
+		{
+			parameter<string> Continent_name;
+			//
+			unit<uint32> Select := ='select_with_attr_by_cond(SourceData/Settlements/'+SettlementType_name+',  SourceData/Settlements/'+SettlementType_name+'/continent_rel == Continents/v/'+Continent_name+')';
+		}
+	}
+	
+	Template Call_CreateNetwork_T
+	{
+		parameter<string> Continent_name;
+		unit<uint32>      Org;
+		unit<uint32>      Dest;
+		///
+		unit<uint32>      RoadDomain_src := ='SourceData/Infrastructure/OSM/Per_Continent/'+Continent_name+'';
+		
+		container NetwerkSpec :=
+			Templates/CreateNetwork_T(
+				  org
+				, dest
+				, RoadDomain_src
+			);
+	}
+}

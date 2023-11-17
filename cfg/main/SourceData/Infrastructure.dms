@@ -1,0 +1,105 @@
+container Infrastructure : using = "geometries;units"
+{  
+	container OSM
+	{	
+		parameter<string> file_date := '20231109';
+		parameter<string> dir       := '%NetworkModelWorld_DataDir%/Infrastructure/OSM/'+file_date;
+		parameter<string> date      := 'latest';
+		unit<uint32>      Regios    := ModelParameters/Advanced/OSM_Regios;
+	
+		container Per_OSM_Continent :=
+			for_each_ne(
+				Regios/name
+				, 'Per_Continent_T('+quote(Regios/label)+')'
+			)
+		{
+			parameter<string> Generate_all := 'Ready', ExplicitSuppliers = "=AsList(Regios/name+'/Generate_Lines_FSS', ';')";
+		}
+		
+		container Per_Continent 
+		{
+			unit<uint32> Africa            := Per_OSM_Continent/Africa/Roads;
+			unit<uint32> Asia              := Per_OSM_Continent/Asia/Roads;
+			unit<uint32> Australia_Oceania := Per_OSM_Continent/Australia_Oceania/Roads;
+			unit<uint32> Europe            := Per_OSM_Continent/Europe/Roads;
+			unit<uint32> North_America     := union_unit(Per_OSM_Continent/North_America/Roads,Per_OSM_Continent/Central_America/Roads)
+			{
+				attribute<wgs84>                        geometry (arc) := union_data(., Per_OSM_Continent/North_America/Roads/geometry,Per_OSM_Continent/Central_America/Roads/geometry);
+				attribute<string>                       highway        := union_data(., Per_OSM_Continent/North_America/Roads/highway,Per_OSM_Continent/Central_America/Roads/highway);
+				attribute<string>                       other_tags     := union_data(., Per_OSM_Continent/North_America/Roads/other_tags,Per_OSM_Continent/Central_America/Roads/other_tags);
+				attribute<int32>                        z_order        := union_data(., Per_OSM_Continent/North_America/Roads/z_order,Per_OSM_Continent/Central_America/Roads/z_order);
+				attribute<classifications/OSM/roadtype> roadtype_rel   := union_data(., Per_OSM_Continent/North_America/Roads/roadtype_rel,Per_OSM_Continent/Central_America/Roads/roadtype_rel);
+				attribute<bool>                         IsOneDirection := union_data(., Per_OSM_Continent/North_America/Roads/IsOneDirection,Per_OSM_Continent/Central_America/Roads/IsOneDirection);
+				attribute<bool>                         Connectable    := union_data(., Per_OSM_Continent/North_America/Roads/Connectable,Per_OSM_Continent/Central_America/Roads/Connectable);
+				attribute<km_hr>                        KPH            := union_data(., Per_OSM_Continent/North_America/Roads/KPH,Per_OSM_Continent/Central_America/Roads/KPH);
+			}
+			unit<uint32> South_America     := Per_OSM_Continent/South_America/Roads;
+			
+		}
+		
+		
+		Template Per_Continent_T
+		{
+			parameter<string> Regio0;
+			///
+			parameter<string> Regio := replace(Regio0, '_', '-');
+			
+			
+			parameter<string> Generate_Lines_FSS := 'Lines', ExplicitSuppliers = "Make_lines_fss";
+			
+			container Read_Roads_pbf
+			:	StorageName     = "= dir + '/'+Regio+'-'+date+'.osm.pbf'" 
+			,	StorageType     = "gdal.vect"
+			,	StorageReadOnly = "True"
+			, 	SyncMode        = "AllTables"
+			, 	DialogData      = "wgs84";
+			
+			unit<uint32> Make_lines_fss := select(IsDefined(Read_Roads_pbf/lines/geometry))
+			,   StorageName = "='%LocalDataProjDir%/RegionFiles/'+file_date+'_'+Regio+'.fss'"
+			{
+				attribute<wgs84>                        geometry (arc) := select_data(., IsDefined(Read_Roads_pbf/lines/geometry), Read_Roads_pbf/lines/geometry);
+				attribute<string>                       highway        := select_data(., IsDefined(Read_Roads_pbf/lines/geometry), Read_Roads_pbf/lines/highway);
+				attribute<string>                       other_tags     := select_data(., IsDefined(Read_Roads_pbf/lines/geometry), Read_Roads_pbf/lines/other_tags);
+				attribute<int32>                        z_order        := select_data(., IsDefined(Read_Roads_pbf/lines/geometry), Read_Roads_pbf/lines/z_order);
+			}
+			
+			unit<uint32> Read_lines_fss 
+			:   StorageName = "='%LocalDataProjDir%/RegionFiles/'+file_date+'_'+Regio+'.fss'"
+			,	StorageReadOnly = "True"
+			{
+				attribute<wgs84>                        geometry (arc);
+				attribute<string>                       highway;
+				attribute<string>                       other_tags;
+				attribute<int32>                        z_order;
+				attribute<classifications/OSM/roadtype> roadtype_rel   := rlookup(highway, classifications/OSM/roadtype/name);
+				
+				
+				attribute<bool>                       IsOneDirection    := strcount(other_tags, '"oneway"=>"yes"') > 0;
+				
+				unit<uint8> MaxSpeeds : nrofrows = 15
+				{
+					attribute<string> name  := 's'+speed;
+					attribute<string> speed : ['10','20','30','40','50','60','70','80','90','100','110','120','130','140','150'];
+					attribute<string> expr  := '"maxspeed"=>"'+speed+'"';
+					attribute<string> label := name;
+				}
+				
+				container ExtractMaxSpeeds :=
+					for_each_nedv(
+						MaxSpeeds/name
+						, 'strcount(other_tags, '+quote(MaxSpeeds/expr)+')'
+						, .
+						, uint32
+					);
+				attribute<MaxSpeeds>                       KPH_from_source_rel    := ='argmax_ifdefined_uint8('+AsItemList('ExtractMaxSpeeds/'+MaxSpeeds/name+' > 0 ? ExtractMaxSpeeds/'+MaxSpeeds/name+' : null_u')+')';
+				attribute<km_hr>                           KPH_from_source        := value(MaxSpeeds/speed, km_hr)[KPH_from_source_rel];
+			}
+			
+			unit<uint32> Roads := select_with_attr_by_cond(Read_lines_fss, IsDefined(Read_lines_fss/roadtype_rel))
+			{
+				attribute<bool>  Connectable    := roadtype_rel != Classifications/OSM/roadtype/V/motorway && roadtype_rel != Classifications/OSM/roadtype/V/motorway_link;
+				attribute<km_hr> KPH            := MakeDefined(KPH_from_source, Classifications/OSM/roadtype/CarSpeedOutside[roadtype_rel]);
+			}
+		}
+	}
+}

@@ -1,0 +1,191 @@
+container SourceData: Using = "Units;Classifications;geometries"
+{
+	#include<Infrastructure.dms>
+	#include<RegionalUnits.dms>
+	
+	container Settlements : using = "RegionalUnits"
+	{
+		unit<uint32> villages // SMOD_V1s6_opr_P2023_v1_2020_labelRC_DB -> villages -> degurba klasse 13
+		: StorageName = "%NetworkModelWorld_DataDir%/Settlements/SMOD_V1s6_opr_P2023_v1_2020_labelRC_DB.shp"
+		, StorageType = "gdal.vect"
+		, DialogData  = "WorldMollweide"
+		, DialogType = "Map"
+		, StorageReadOnly = "TRUE"
+		{
+			attribute<WorldMollweide> geometry    (poly);
+			attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			attribute<int32>          ID                 := ID_RC_G0;
+			attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/villages/type/id, CalcCentroids/read/villages/type/centroid);
+			attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/villages/type/id, CalcCentroids/read/villages/type/continent_rel);
+			
+			unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
+			{
+				attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
+			}
+		}
+		
+		unit<uint32> semidensetowns // SMOD_V1s6_opr_P2023_v1_2020_labelSDUC_DB -> semi-dense towns -> degurba klasse 22
+		: StorageName = "%NetworkModelWorld_DataDir%/Settlements/SMOD_V1s6_opr_P2023_v1_2020_labelSDUC_DB.shp"
+		, StorageType = "gdal.vect"
+		, DialogData  = "WorldMollweide"
+		, DialogType = "Map"
+		, StorageReadOnly = "TRUE"
+		{
+			attribute<WorldMollweide> geometry    (poly);
+			attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			attribute<int32>          ID                 := ID_SDUC_G0;
+			attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/semidensetowns/type/id, CalcCentroids/read/semidensetowns/type/centroid);
+			attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/semidensetowns/type/id, CalcCentroids/read/semidensetowns/type/continent_rel);
+			
+			unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
+			{
+				attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
+			}
+		}
+		
+		unit<uint32> towns // SMOD_V1s6_opr_P2023_v1_2020_labelDUC_DB -> towns -> degurba klasse 23
+		: StorageName = "%NetworkModelWorld_DataDir%/Settlements/SMOD_V1s6_opr_P2023_v1_2020_labelDUC_DB.shp"
+		, StorageType = "gdal.vect"
+		, DialogData  = "WorldMollweide"
+		, DialogType = "Map"
+		, StorageReadOnly = "TRUE"
+		{
+			attribute<WorldMollweide> geometry    (poly);
+			attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			attribute<int32>          ID                 := ID_DUC_G0;
+			attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/towns/type/id, CalcCentroids/read/towns/type/centroid);
+			attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/towns/type/id, CalcCentroids/read/towns/type/continent_rel);
+			
+			unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
+			{
+				attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
+			}
+		}
+		
+		unit<uint32> cities // SMOD_V1s6_opr_P2023_v1_2020_labelUC_DB -> cities -> degurba klasse 30
+		: StorageName = "%NetworkModelWorld_DataDir%/Settlements/SMOD_V1s6_opr_P2023_v1_2020_labelUC_DB.shp"
+		, StorageType = "gdal.vect"
+		, DialogData  = "geometry_LL"
+		, DialogType = "Map"
+		, StorageReadOnly = "TRUE"
+		{
+			attribute<WorldMollweide> geometry    (poly);
+			attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			attribute<int32>          ID                 := ID_UC_G0;
+			attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/cities/type/id, CalcCentroids/read/cities/type/centroid);
+			attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/cities/type/id, CalcCentroids/read/cities/type/continent_rel);
+			
+			unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
+			{
+				attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
+			}
+		}
+		
+		container CalcCentroids
+		{
+			parameter<string> Generate := 'Ready', ExplicitSuppliers = "=AsList('Write/'+Classifications/SettlementTypes/name+'/type', ';')";
+			// parameter<string> Generate_crel := 'Ready', ExplicitSuppliers = "=AsList('Write/'+Classifications/SettlementTypes/name+'/type/continent_rel', ';')";
+			
+			container Write :=
+				for_each_ne(
+					Classifications/SettlementTypes/name
+					, 'Write_Centroids_T('+quote(Classifications/SettlementTypes/name)+')'
+				);
+			container Read :=
+				for_each_ne(
+					Classifications/SettlementTypes/name
+					, 'Read_Centroids_T('+quote(Classifications/SettlementTypes/name)+')'
+				);
+			
+			Template Write_Centroids_T
+			{
+				parameter<string> SettlementType_name;
+				///
+				
+				unit<uint32> type := ='Settlements/'+SettlementType_name
+				, StorageName = "='%NetworkModelWorld_DataDir%/Settlements/'+SettlementType_name+'_centroid_Pop-'+Population/gridsize+'m.fss'"
+				{
+					attribute<WGS84>          centroid           := CalcPopCentroids/CalcPopCentroids/geometry;
+					attribute<int32>          ID                 := ='Settlements/'+SettlementType_name+'/ID';
+					// attribute<Continents>     continent_rel      := ='point_in_polygon(rjoin(ID, CalcCentroids/read/'+SettlementType_name+'/type/id, CalcCentroids/read/'+SettlementType_name+'/type/centroid), continents/geometry)';
+					attribute<Continents>     continent_rel      := ='point_in_polygon(centroid, continents/geometry)';
+
+					container CalcPopCentroids := CalcPopCentroids_T(.), DisableStorage = "TRUE";
+				}
+			}
+			
+			Template Read_Centroids_T
+			{
+				parameter<string> SettlementType_name;
+				///
+				
+				unit<uint32> type
+				: StorageName = "='%NetworkModelWorld_DataDir%/Settlements/'+SettlementType_name+'_centroid_Pop-'+Population/gridsize+'m.fss'"
+				, StorageReadOnly = "true"
+				{
+					attribute<WGS84>          centroid;
+					attribute<int32>          ID;
+					attribute<Continents>     continent_rel;
+				}
+			}
+		}
+	}
+	
+	container Population
+	{
+		parameter<string> GridSize          := '100';
+		parameter<string> FileName_src      := '%NetworkModelWorld_DataDir%/population/GHS_POP_E2020_GLOBE_R2023A_54009_@GRID@_V1_0';
+		parameter<string> FileName          := replace(FileName_src, '@GRID@', Gridsize);
+
+		unit<ipoint> big_raster
+		:	StorageName     = "= FileName+'.tif'"
+		,	StorageReadOnly = "True"
+		,	DialogData      = "WorldMollweide"
+		, 	LazyCalculated  = "true"
+		{ 
+			attribute<float64> GridData; // don't read this; memory will explode
+		}
+		
+		unit<uint64> PopulatedCells := select(big_raster/GridData > 0d), DialogType = "map", DialogData = "org_rel"  
+		{
+			attribute<big_raster>     org_rel              := collect_by_cond(PopulatedCells, big_raster/GridData > 0d, id(big_raster));
+			attribute<WorldMollweide> org_rel_to_mollweide := convert(org_rel, WorldMollweide);
+			attribute<WGS84>          latlon_point         := convert(org_rel_to_mollweide, WGS84);
+			attribute<WGS84>          latlon_point_swapped := point(PointCol(latlon_point), PointRow(latlon_point), WGS84);
+			attribute<base_grid>      base_grid_rel        := convert(latlon_point_swapped, base_grid);
+			attribute<float64>        Population           := collect_by_cond(PopulatedCells, big_raster/GridData > 0d, big_raster/GridData);
+			attribute<WGS84>          Geometry             := latlon_point_swapped;
+		}
+	}
+	
+	Template CalcPopCentroids_T
+	{
+		unit<uint32> src;
+		///
+	
+		unit<uint32> CalcPopCentroids := src
+		{
+			attribute<float64> W          := sum(Population/pop, Population/settlement_rel);
+			
+			attribute<float64> Weighted_X := sum(Population/x * Population/pop, Population/settlement_rel);
+			attribute<float64> Weighted_Y := sum(Population/y * Population/pop, Population/settlement_rel);
+			
+			attribute<float64> mean_X     := Weighted_X / W;
+			attribute<float64> mean_Y     := Weighted_y / W;
+			 
+			attribute<WGS84>  weighted_centroid0            := point(mean_X, mean_Y, WGS84);
+			attribute<bool>   IsWeighted_centroid_in_settl  := IsDefined(point_in_polygon(weighted_centroid0, src/geometry_LL));
+			attribute<WGS84>  weighted_centroid             := IsWeighted_centroid_in_settl ? weighted_centroid0 : centroid_or_mid(src/geometry_LL);
+			attribute<WGS84>  geometry                      := weighted_centroid;
+			
+			unit<uint64> Population := SourceData/Population/PopulatedCells
+			{
+				attribute<src>     settlement_rel := point_in_polygon(geometry, src/geometry_ll);
+				attribute<float64> x              := pointcol(geometry);
+				attribute<float64> y              := pointrow(geometry);
+				attribute<float64> pop            := population[float64];
+				
+			}
+		}
+	}
+}

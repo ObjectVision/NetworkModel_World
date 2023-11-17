@@ -1,0 +1,49 @@
+container Analyses: Using = "Units;Classifications;geometries;sourcedata" 
+{  
+	container Per_SettlementType :=
+		for_each_ne(
+			SettlementTypes/name
+			,'Per_SettlementType_T('+quote(SettlementTypes/name)+')'
+		);
+		
+	Template Per_SettlementType_T
+	{
+		parameter<string> SettlementType_name;
+		///
+
+		container Per_Continent :=
+			for_each_ne(
+				continents/name
+				,'Traveltime_PerContinent_T(
+					'+quote(continents/label)+
+					',/NetworkSetup/Per_SettlementType/'+SettlementType_name+'/OrgDest_Per_Continent/'+continents/label+'/select'  //orgs
+					',/NetworkSetup/Per_SettlementType/'+SettlementType_name+'/OrgDest_Per_Continent/'+continents/label+'/select'  //dests
+					',/NetworkSetup/Per_SettlementType/'+SettlementType_name+'/Per_Continent/'+continents/label+'/NetwerkSpec'
+				')'
+			);
+	}
+	
+	Template Traveltime_PerContinent_T
+	{
+		parameter<string> Continent_name;
+		unit<uint32>      Org;
+		unit<uint32>      Dest;
+		container         NetwerkSpec;
+		///
+
+		unit<uint32> FinalLinkSet := NetwerkSpec/CreateMoreEfficientNetwork/FinalLinkSet;
+		unit<uint32> FinalNodeSet := NetwerkSpec/CreateMoreEfficientNetwork/FinalNodeSet;
+		
+		unit<uint64> OD_matrix :=
+			impedance_matrix_od64('bidirectional(link_flag);startPoint(Node_rel);endPoint(Node_rel);cut(OrgZone_max_imp);od:impedance,OrgZone_rel,DstZone_rel'
+				, FinalLinkSet/impedance
+				, FinalLinkSet/F1
+				, FinalLinkSet/F2
+				
+				, !FinalLinkSet/IsOneDirection
+				, FinalNodeSet/OrgNode_rel 
+				, FinalNodeSet/DestNode_rel 
+				, convert(ModelParameters/MaxTravelTime, s_f) //cut impedance
+			);
+	}
+}
