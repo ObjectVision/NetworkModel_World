@@ -1,0 +1,3 @@
+in console
+
+pip install osmnx
