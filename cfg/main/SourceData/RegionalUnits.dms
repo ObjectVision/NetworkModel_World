@@ -5,7 +5,25 @@ container RegionalUnits : using = "geometries"
 	, StorageType = "gdal.vect"
 	, StorageReadOnly = "true"
 	{
-		attribute<wgs84>            geometry (poly);
+		attribute<wgs84>            Geometry (poly);
+		attribute<WorldMollweide>   Geometry_MW (poly) := convert(Convert_wgs84_mollweide/geometry_yx, WorldMollweide);
+		
+		// convert wgs84 geometry to mollweide geometry
+		container Convert_wgs84_mollweide
+		{
+			unit<uint32> border_points := sequence2points(geometry)
+			{
+				attribute<wgs84> point_yx := Point(PointCol(point), PointRow(point), wgs84);
+			}
+			unit<uint32> Country_ui32 := range(uint32, 0, uint32(#Countries))
+			{
+				attribute<wgs84> Geometry_yx (poly) := points2sequence_pso(border_points/point_yx, border_points/sequence_rel[Country_ui32], border_points/ordinal);
+			}
+			attribute<wgs84>          Geometry_yx (poly, ..) := union_data(Countries, Country_ui32/Geometry_yx);
+		}
+		
+		
+		
 		attribute<uq_countries>     countries_rel  := rlookup(country, uq_countries/values);
 		attribute<Continents>       continents_rel := rlookup(AsItemName(continent_edit), Continents/name);
 		
