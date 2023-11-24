@@ -1,12 +1,19 @@
 container RegionalUnits : using = "geometries"
-{ 
-	unit<uint32> Countries 
-	: StorageName = "%NetworkModelWorld_DataDir%/Regions/gadm_410.gpkg"
-	, StorageType = "gdal.vect"
-	, StorageReadOnly = "true"
+{ 	
+	
+	unit<uint32> Countries: storagename = "= propvalue(store_Countries, 'StorageName')", StorageReadOnly = "True", DialogData = "geometry", dialogtype = "map" {
+		attribute<string> 			LabelText; 
+		attribute<wgs84> 			geometry (poly); 
+		attribute<WorldMollweide>   Geometry_MW (poly); 
+		attribute<Continents>		Continents_rel; 
+	}
+	
+	unit<uint32> store_Countries:= unique(Local_Units/Country), storagename = "%NetworkModelWorld_DataDir%/Regions/fss/Countries.fss"
 	{
-		attribute<wgs84>            Geometry (poly);
+		attribute<string> 			LabelText:= Values;
+		attribute<wgs84> 			geometry (poly) := partitioned_union_polygon(Local_Units/geometry[BaseProjection_ip], Local_Units/store_countries_rel)[wgs84];
 		attribute<WorldMollweide>   Geometry_MW (poly) := convert(Convert_wgs84_mollweide/geometry_yx, WorldMollweide);
+		attribute<Continents>		Continents_rel:= first(Local_Units/Continents_rel, Local_Units/store_countries_rel);
 		
 		// convert wgs84 geometry to mollweide geometry
 		container Convert_wgs84_mollweide
@@ -15,29 +22,34 @@ container RegionalUnits : using = "geometries"
 			{
 				attribute<wgs84> point_yx := Point(PointCol(point), PointRow(point), wgs84);
 			}
-			unit<uint32> Country_ui32 := range(uint32, 0, uint32(#Countries))
+			unit<uint32> Country_ui32 := range(uint32, 0, uint32(#store_Countries))
 			{
 				attribute<wgs84> Geometry_yx (poly) := points2sequence_pso(border_points/point_yx, border_points/sequence_rel[Country_ui32], border_points/ordinal);
 			}
-			attribute<wgs84>          Geometry_yx (poly, ..) := union_data(Countries, Country_ui32/Geometry_yx);
+			attribute<wgs84>          Geometry_yx (poly, ..) := union_data(store_Countries, Country_ui32/Geometry_yx);
 		}
 		
+	}
+	
+
+	unit<uint32> Local_Units //Countries 
+	: StorageName = "%NetworkModelWorld_DataDir%/Regions/gadm_410.gpkg"
+	, StorageType = "gdal.vect"
+	, StorageReadOnly = "true"
+	{
+		attribute<wgs84>            Geometry (poly);
 		
-		
-		attribute<uq_countries>     countries_rel  := rlookup(country, uq_countries/values);
+		attribute<store_Countries>  store_countries_rel  := rlookup(Country, store_Countries/values);
 		attribute<Continents>       continents_rel := rlookup(AsItemName(continent_edit), Continents/name);
 		
 		attribute<string>           continent_edit := continent == 'Australia' || continent == 'Oceania' ? 'Australia_Oceania' : continent;
 		
-		unit<uint32> uq_countries := unique(Country)
-		{
-			attribute<wgs84> geometry (poly) := partitioned_union_polygon(../geometry[BaseProjection_ip], uq_rel)[wgs84];
-		}
+		
 	}
 	
 	unit<uint8> Continents := Classifications/Continents
 	{
-		attribute<wgs84>  geometry (poly) := partitioned_union_polygon(Countries/geometry[BaseProjection_ip], countries/continents_rel)[wgs84];
+		attribute<wgs84>  geometry (poly) := partitioned_union_polygon(Local_Units/geometry[BaseProjection_ip], Local_Units/continents_rel)[wgs84];
 		attribute<string> name            := Classifications/Continents/name;
 		attribute<string> label           := Classifications/Continents/label;
 		

@@ -1,47 +1,74 @@
 container NetworkSetup : using = "units;geometries;SourceData;Classifications"
-{
-	container Per_SettlementType :=
+{	
+	container Settlements_Per_Continent :=
+		for_each_ne(Continents/name, 'selSettlements_Per_Continent_T(SourceData/Settlements/all_Settlements,'+quote(Continents/name)+')');
+	container GridPoints_Per_Continent := 
+		for_each_ne(Continents/name, 'selGridpoints_Per_Continent_T(SourceData/Population/LandCells,'+quote(Continents/name)+', SourceData/RegionalUnits/Countries)');
+	container Per_Continent :=
 		for_each_ne(
-			SettlementTypes/name
-			,'Per_SettlementType_T('+quote(SettlementTypes/name)+')'
-		);
-		
-	Template Per_SettlementType_T
+			Continents/name
+			,'Call_CreateNetwork_T(
+				'+quote(Continents/label)+
+				',Settlements_Per_Continent/'+Continents/name+'/Select'  //orgs
+				',GridPoints_Per_Continent/'+Continents/name+'/Select'  //dests
+				',GridPoints_Per_Continent/'+Continents/name+'/sep_units'  //dests
+			')'
+	);
+	
+	
+	Template selGridpoints_Per_Continent_T
 	{
-		parameter<string> SettlementType_name;
-		///
+		unit<uint64> inUnit;
+		parameter<string> Continent_name;
+		unit<uint32> inCountries;
+		//
+		unit<uint64> Select_ui64 := ='select_with_attr_by_cond(inUnit,  inUnit/continent_rel == Continents/v/'+Continent_name+')';
 		
-		container Per_Continent :=
-			for_each_ne(
-				Continents/name
-				,'Call_CreateNetwork_T(
-					'+quote(Continents/label)+
-					',OrgDest_Per_Continent/'+Continents/name+'/Select'  //orgs
-					',OrgDest_Per_Continent/'+Continents/name+'/Select'  //dests
-				')'
-			);
+		unit<uint32> Select:= range(uint32, 0, uint32(#Select_ui64)), dialogdata = "centroid", dialogtype = "map" {
+			attribute<ipoint> 	org_rel:= 	 ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/org_rel)';
+			attribute<WGS84> 	centroid:=   ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/centroid)';
+			attribute<float32>	population:= ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)[float32]';
+			attribute<sep_units>sepunit_rel:= point_in_polygon(centroid, sep_units/geom_LL);
+		}
+		unit<uint32> Countries:= ='select_with_attr_by_cond(inCountries, inCountries/Continents_rel == Continents/v/'+Continent_name+')' {
+			attribute<string> LabelText:= ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/LabelText)';
+			attribute<WGS84>  Geometry (poly):= ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry)';
+			unit<uint32> border_points := sequence2points(geometry) {attribute<dpoint> points_x1000 := point[dpoint] * point(1000d, 1000d, dpoint);}
+			attribute<ipoint> iGeom (poly) := points2sequence_pso(border_points/points_x1000, border_points/sequence_rel, border_points/ordinal)[ipoint];
+		}
+		unit<uint32> sep_units:= split_polygon(Countries/iGeom) {
+			unit<uint32> 		border_points := sequence2points(geometry) {attribute<WGS84> points_div := (point[dpoint] / point(1000d, 1000d, dpoint))[WGS84];}
+			attribute<WGS84> 	geometry_LL (poly):= points2sequence_pso(border_points/points_div, border_points/sequence_rel, border_points/ordinal);
+		}
 		
-		container OrgDest_Per_Continent :=
-			for_each_ne(
-				Continents/name
-				, 'OrgsDest_Per_Continent_T('+quote(Continents/name)+')'
-			);
+		// establish islands here (make connections to right, right/bottom, bottom)
+		//unit<uint32> 
+		
+			//collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/GridData)
+
+	}
+	Template selSettlements_Per_Continent_T
+	{
+		unit<uint32> inUnit;
+		parameter<string> Continent_name;
+		//
+		unit<uint32> Select := ='select_with_attr_by_cond(inUnit,  inUnit/continent_rel == Continents/v/'+Continent_name+')', dialogdata = "geometry_LL", dialogtype = "map"  {
+			attribute<WGS84> geometry_LL (poly):= ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/geometry_LL)';
+			attribute<WGS84> centroid:= ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/centroid)';
+			attribute<float32>	population:= ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)';
 			
-		Template OrgsDest_Per_Continent_T
-		{
-			parameter<string> Continent_name;
-			//
-			unit<uint32> Select := ='select_with_attr_by_cond(SourceData/Settlements/'+SettlementType_name+',  SourceData/Settlements/'+SettlementType_name+'/continent_rel == Continents/v/'+Continent_name+')';
+			//collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/GridData)
 		}
 	}
-	
 	Template Call_CreateNetwork_T
 	{
 		parameter<string> Continent_name;
 		unit<uint32>      Org;
 		unit<uint32>      Dest;
+		unit<uint32>	  RoadSelDomain;
 		///
 		unit<uint32>      RoadDomain_src := ='SourceData/Infrastructure/OSM/Per_Continent/'+Continent_name+'';
+		
 		
 		container NetwerkSpec :=
 			Templates/CreateNetwork_T(

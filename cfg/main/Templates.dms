@@ -62,7 +62,7 @@ container Templates: Using = "Units;Classifications;geometries"
 				attribute<UqGeomPointSet> F2 := rlookup(nextpoint, UqGeomPointSet/values);
 				
 				// for checking and visualisation only
-				container Connectiveness := Templates/Check_Connectiveness_T(.,UqGeomPointSet, F1, F2);
+				container Connectiveness := Templates/Check_Connectiveness_T_seldomain(.,UqGeomPointSet, F1, F2, RoadSelDomain, RoadSelDomain/Geometry_LL);
 				attribute<BaseProjection> geometry(arc) := points2sequence(PointSet/geometry, convert(id(PointSet) % #., .));
 			}
 			
@@ -445,7 +445,43 @@ container Templates: Using = "Units;Classifications;geometries"
 			attribute<BaseProjection>        geometry := org_rel -> geometry;
 		}
 	}
-	
+	Template Check_Connectiveness_T_seldomain
+	{
+		unit<uint32> LinkSet_domain;
+		unit<uint32> NodeSet_domain;
+		attribute<NodeSet_domain> F1(LinkSet_domain);
+		attribute<NodeSet_domain> F2(LinkSet_domain);
+		unit<uint32> 		seldomain;
+		attribute<WGS84>	seldomain_geom (poly, seldomain);
+		
+		attribute<seldomain> seldomain_rel (NodeSet_domain):= point_in_polygon(NodeSet_domain/geometry, seldomain_geom);
+		
+		unit<uint32> Networks_per_seldomain:= combine(Networks, seldomain) {
+			attribute<uint32> Nr_nodes_in_both:= pcount(Networks/nps_rel);
+			attribute<uint32> Nr_nodes_in_network:= Nr_nodes_in_both > 0 ? Networks/Nr_Nodes[nr_1] : 0 / 0;
+		}
+		
+		///
+		
+		unit<uint32> Networks:= connected_parts(F1, F2) // Verzameling van alle netwerken, inclusief de subnetwerken.
+		{
+			attribute<Networks_per_seldomain> nps_rel (NodeSet_domain):= rlookup(point(PartNr, seldomain_rel, upoint), point(Networks_per_seldomain/nr_1, Networks_per_seldomain/nr_2, upoint));
+			attribute<uint32>   Nr_Nodes   := pcount(PartNr);
+			parameter<Networks> Main       := max_index(Nr_Nodes); // uitgangspunt: het netwerk met de meeste nodes is het relevante netwerk
+			attribute<Networks> Main_in_seldomain (seldomain) := Networks_per_seldomain/nr_1[max_index(Networks_per_seldomain/Nr_nodes_in_network, Networks_per_seldomain/nr_2)]; // uitgangspunt: neem het grootste netwerk met minstens een punt binnen de grenzen van een unit.
+			attribute<uint32>	Nr_Nodes_Main_in_seldomain (seldomain):= Nr_Nodes[Main_in_seldomain];
+			attribute<bool>     IsConnected (NodeSet_domain) := PartNr == Main;
+			attribute<bool> 	IsConnected_seldomain (NodeSet_domain) := IsDefined(rlookup(PartNr, Main_in_seldomain));
+		}
+		
+		attribute<bool> IsVerbonden_single (LinkSet_domain) := Networks/IsConnected[F1] && Networks/IsConnected[F2];
+		attribute<bool> IsVerbonden (LinkSet_domain) := Networks/IsConnected_seldomain[F1] || Networks/IsConnected_seldomain[F2];
+
+		unit<uint32> NodesNotConnected := select_with_org_rel(!Networks/IsConnected)
+		{
+			attribute<BaseProjection>        geometry := org_rel -> geometry;
+		}
+	}
 	Template Check_Connectiveness_T_adhoc
 	{
 		unit<uint32> LinkSet_domain;
