@@ -72,7 +72,7 @@ container Infrastructure : using = "geometries;units"
 				attribute<string>                       other_tags;
 				attribute<int32>                        z_order;
 				attribute<classifications/OSM/roadtype> roadtype_rel   := rlookup(highway, classifications/OSM/roadtype/name);
-				
+				attribute<bool>                         IsPartOfCarNetwork := /Classifications/OSM/roadtype/IsPartOfCarNetwork[roadtype_rel];
 				
 				attribute<bool>                       IsOneDirection    := strcount(other_tags, '"oneway"=>"yes"') > 0;
 				
@@ -95,7 +95,7 @@ container Infrastructure : using = "geometries;units"
 				attribute<km_hr>                           KPH_from_source        := value(MaxSpeeds/speed, km_hr)[KPH_from_source_rel];
 			}
 			
-			unit<uint32> Roads := select_with_attr_by_cond(Read_lines_fss, IsDefined(Read_lines_fss/roadtype_rel))
+			unit<uint32> Roads := select_with_attr_by_cond(Read_lines_fss, Read_lines_fss/IsPartOfCarNetwork)
 			{
 				attribute<bool>  Connectable    := roadtype_rel != Classifications/OSM/roadtype/V/motorway && roadtype_rel != Classifications/OSM/roadtype/V/motorway_link;
 				attribute<km_hr> KPH            := MakeDefined(KPH_from_source, Classifications/OSM/roadtype/CarSpeedOutside[roadtype_rel]);

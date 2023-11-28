@@ -8,7 +8,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata"
 		
 	Template Per_SettlementType_T
 	{
-		parameter<string> SettlementType_name;
+		parameter<string> SettlementType_name; 
 		///
 
 		container Per_Continent :=
@@ -21,7 +21,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata"
 					',/NetworkSetup/Per_SettlementType/'+SettlementType_name+'/Per_Continent/'+continents/label+'/NetwerkSpec'
 				')'
 			);
-	}
+	} 
 	
 	Template Traveltime_PerContinent_T
 	{
