@@ -58,8 +58,8 @@ container Templates: Using = "Units;Classifications;geometries"
 				attribute<BaseProjection>  first_point          := first_point(geometry);
 				attribute<BaseProjection>  last_point           := last_point(geometry); 
 				
-				attribute<Geometries/WebMercator_base> point_wm	   := convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WebMercator_base); // convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WorldMollweide);
-				attribute<Geometries/WebMercator_base> nextpoint_wm  := convert(point(PointCol(NextPoint), PointRow(NextPoint))[BaseProjection], Geometries/WebMercator_base);
+				attribute<Geometries/WebMercator_base> point_wm	   := convert(point(PointCol(first_point), PointRow(first_point))[BaseProjection], Geometries/WebMercator_base); // convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WorldMollweide);
+				attribute<Geometries/WebMercator_base> nextpoint_wm  := convert(point(PointCol(last_point), PointRow(last_point))[BaseProjection], Geometries/WebMercator_base);
 				
 				unit<uint32> PointSet := union_unit(., .)
 				{
