@@ -108,9 +108,6 @@ container Templates: Using = "Units;Classifications;geometries"
 				
 				attribute<km>              LengthKm       := convert(dist(fp_wm, lp_wm)[m], km);
 				attribute<min_f>           Minutes        := MakeDefined(convert((LengthKm / KPH), min_f), 0.0001[min_f]);
-				attribute<s_f>             impedance      := convert(minutes, s_f) + Float64(CorrectImpedanceForCrossroads/impedance_Start + CorrectImpedanceForCrossroads/impedance_End);
-				attribute<NodeSet>         F1             := rlookup(first_point, NodeSet/Values); //node from the OD towards the network
-				attribute<NodeSet>         F2             := rlookup(last_point,  NodeSet/Values); //network node to which the the OD is connected 
 			}
 
 			unit<uint32> NodeSet := unique(union_data(LinkSet/PointSet, LinkSet/first_point, LinkSet/last_point))
@@ -118,7 +115,42 @@ container Templates: Using = "Units;Classifications;geometries"
 				attribute<BaseProjection> geometry := values;
 				attribute<uint32> NrConnectedLinks := pcount(LinkSet/F1) + pcount(LinkSet/F2);
 			}
-						
+			unit<uint32> LinkSet_Write := LinkSet,	StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Linkset_O-'+OrgName+'_D-'+Destname+'.fss'"
+			{
+				attribute<km_hr>           KPH                  := LinkSet/KPH;
+				attribute<km>			   LengthKm				:= LinkSet/LengthKm;
+				attribute<bool>            IsOneDirection       := LinkSet/IsOneDirection;
+				attribute<BaseProjection>  first_point          := LinkSet/first_point; 
+				attribute<BaseProjection>  last_point           := LinkSet/last_point; 
+				attribute<bool>            IsOD_connection_road := LinkSet/IsOD_connection_road;
+			}
+			
+			unit<uint32> LinkSet_Read: StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Linkset_O-'+OrgName+'_D-'+Destname+'.fss'", StorageReadOnly = "True", dialogdata = "geometry_LL", dialogtype = "map"
+			{
+				attribute<km_hr>           KPH;
+				attribute<km>			   LengthKm;
+				attribute<bool>            IsOneDirection;
+				attribute<BaseProjection>  first_point;
+				attribute<BaseProjection>  last_point;
+				attribute<bool>            IsOD_connection_road;
+				attribute<min_f>           Minutes        		:= MakeDefined(convert((LengthKm / KPH), min_f), 0.0001[min_f]);
+				attribute<s_f>             impedance      := convert(minutes, s_f) + Float64(CorrectImpedanceForCrossroads/impedance_Start + CorrectImpedanceForCrossroads/impedance_End);
+				attribute<BaseProjection>  geometry (arc)    := points2sequence(PointSet_fromRead/Point[BaseProjection], PointSet_fromRead/SeqNr, PointSet_fromRead/Ordinal);
+				attribute<NodeSet_fromRead>         F1             		:= rlookup(first_point, NodeSet_fromRead/Values); //node from the OD towards the network
+				attribute<NodeSet_fromRead>         F2             		:= rlookup(last_point,  NodeSet_fromRead/Values); //network node to which the the OD is connected 
+				
+				unit<uint32> PointSet_fromRead:= union_unit(LinkSet_Read, LinkSet_Read) {
+					attribute<BaseProjection>              Point   := Union_Data(., ../first_point, ../last_point);
+					attribute<..>                          SeqNr   := value(id(.) % nrofrows(..), ..);
+					attribute<uint32>                      Ordinal := id(.) / nrofrows(..);
+				}
+				unit<uint32> NodeSet_fromRead := unique(PointSet_fromRead/Point)
+				{
+					attribute<BaseProjection> geometry := values;
+					attribute<uint32> NrConnectedLinks := pcount(../F1) + pcount(../F2);
+				}
+			}			
+			
  			container CorrectImpedanceForCrossroads
 			// hiermee wordt voor ieder begin en eind node het aantal geconnecte links bepaald
 			// dit bepaalt of het een bocht (2 links), zijweg (3 links), kruising (4 links) of complexe kruising (meer dan 4 links) is
@@ -130,10 +162,10 @@ container Templates: Using = "Units;Classifications;geometries"
 				parameter<s>       Impedance4Links    := 5[s];
 				parameter<s>       Impedance_gt4Links := 6[s];
 
-				attribute<uint32>  Start (LinkSet)     := NodeSet/NrConnectedLinks[LinkSet/F1];
-				attribute<uint32>  End   (LinkSet)     := NodeSet/NrConnectedLinks[LinkSet/F2];
+				attribute<uint32>  Start (LinkSet_Read)     := LinkSet_Read/NodeSet_fromRead/NrConnectedLinks[LinkSet_Read/F1];
+				attribute<uint32>  End   (LinkSet_Read)     := LinkSet_Read/NodeSet_fromRead/NrConnectedLinks[LinkSet_Read/F2];
 			
-				attribute<s> impedance_Start (LinkSet):=
+				attribute<s> impedance_Start (LinkSet_Read):=
 					switch(
 						 case(Start <= 2, Impedance2Links)
 						,case(Start  = 3, Impedance3Links)
@@ -141,7 +173,7 @@ container Templates: Using = "Units;Classifications;geometries"
 						,Impedance_gt4Links
 					);
 			
-				attribute<s> impedance_End (LinkSet):=
+				attribute<s> impedance_End (LinkSet_Read):=
 					switch(
 						 case(End <= 2, Impedance2Links)
 						,case(End  = 3, Impedance3Links)
@@ -161,8 +193,8 @@ container Templates: Using = "Units;Classifications;geometries"
 				attribute<uint32> nrofarc_na_iter := ='union_data(., '+AsList('OptimiseNetwork/'+name+'/IntermediateLinkSet/count_arcs', ',')+')'; 
 			}
 			
-			unit<uint32> LinkSet_src     := CreateInitialWorkingNetwork/LinkSet;
-			unit<uint32> NodeSet_src     := CreateInitialWorkingNetwork/NodeSet;
+			unit<uint32> LinkSet_src     := CreateInitialWorkingNetwork/LinkSet_Read;
+			unit<uint32> NodeSet_src     := CreateInitialWorkingNetwork/LinkSet_Read/NodeSet_fromRead;
 
 			unit<uint64> Nodeset_x_NodeSet := combine_unit_uint64(NodeSet_src, NodeSet_src);
 			
@@ -174,28 +206,43 @@ container Templates: Using = "Units;Classifications;geometries"
 			{
 				container LastIter := =last(Iter/name);
 			}
+			unit<uint32> LastLinkSet  := OptimiseNetwork/LastIter/IntermediateLinkSet;
 			
-			
-			unit<uint32> FinalNodeSet := select_with_org_rel(pcount(LastLinkSet/F1)+pcount(LastLinkSet/F2) > 0)
+			// hardstore optimised network and nodeset
+			unit<uint32> FinalNodeSet_Write := select_with_org_rel(pcount(LastLinkSet/F1)+pcount(LastLinkSet/F2) > 0),	StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Final_Nodeset_O-'+OrgName+'_D-'+Destname+'.fss'" 
 			{
 				attribute<BaseProjection> geometry := org_rel->values;
 				attribute<.> OrgNode_rel  (OrgDomain)  := rlookup(OrgDomain/centroid,  geometry);
 				attribute<.> DestNode_rel (DestDomain) := rlookup(DestDomain/centroid, geometry);	
 			}
-			
-			unit<uint32> LastLinkSet  := OptimiseNetwork/LastIter/IntermediateLinkSet;
-			unit<uint32> FinalLinkSet := LastLinkSet
+			unit<uint32> FinalLinkSet_Write := LastLinkSet,	StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Final_Linkset_O-'+OrgName+'_D-'+Destname+'.fss'" 
 			{
-				attribute<FinalNodeSet>      F1                   := invert(FinalNodeSet/org_rel)[LastLinkSet/F1];
-				attribute<FinalNodeSet>      F2                   := invert(FinalNodeSet/org_rel)[LastLinkSet/F2];
+				attribute<FinalNodeSet_Write> F1                  := invert(FinalNodeSet_Write/org_rel)[LastLinkSet/F1];
+				attribute<FinalNodeSet_Write> F2                  := invert(FinalNodeSet_Write/org_rel)[LastLinkSet/F2];
 				attribute<s_f>               Impedance            := LastLinkSet/Impedance;
 				attribute<km>                LengthKm             := LastLinkSet/LengthKm;
 				attribute<bool>              IsOneDirection       := LastLinkSet/IsOneDirection;
 				attribute<bool>              IsOD_connection_road := LastLinkSet/IsOD_connection_road;
+			}
+			
+			// read stored nodeset and links
+			unit<uint32> FinalNodeSet_Read : storagename = "= propvalue(FinalNodeSet_Write, 'StorageName')", StorageReadOnly = "True", dialogdata = "geometry", DialogType = "map" {
+				attribute<BaseProjection> geometry; 
+				attribute<.> OrgNode_rel  (OrgDomain);
+				attribute<.> DestNode_rel (DestDomain);
+			}
+			unit<uint32> FinalLinkSet_Read : StorageName = "= propvalue(FinalLinkSet_Write, 'StorageName')", StorageReadOnly = "True", dialogdata = "geometry", DialogType = "map"
+			{
+				attribute<FinalNodeSet_Read>      F1;
+				attribute<FinalNodeSet_Read>      F2;
+				attribute<s_f>               Impedance;
+				attribute<km>                LengthKm;
+				attribute<bool>              IsOneDirection;
+				attribute<bool>              IsOD_connection_road;
 				
 				// For visualisation
-				attribute<BaseProjection>                  FirstPoint                     := FinalNodeSet/Geometry[F1];
-				attribute<BaseProjection>                  LastPoint                      := FinalNodeSet/Geometry[F2];
+				attribute<BaseProjection>                  FirstPoint                     := FinalNodeSet_Read/Geometry[F1];
+				attribute<BaseProjection>                  LastPoint                      := FinalNodeSet_Read/Geometry[F2];
 				attribute<BaseProjection>                  geometry (arc)                 := points2sequence(PointSet/Point, PointSet/SeqNr, PointSet/Ordinal);
 				unit<uint32> PointSet := union_unit(.,.)
 				{
@@ -206,7 +253,6 @@ container Templates: Using = "Units;Classifications;geometries"
 				
 				unit<uint32> Without_OD_connection_roads := select_with_attr_by_org_rel(.,!IsOD_connection_road);
 			}
-			
 			
 			Template OptimiseNetwork_T
 			{

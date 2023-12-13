@@ -1,29 +1,15 @@
 container Analyses: Using = "Units;Classifications;geometries;sourcedata" 
 {  
-	container Per_SettlementType :=
-		for_each_ne(
-			SettlementTypes/name
-			,'Per_SettlementType_T('+quote(SettlementTypes/name)+')'
-		);
-		
-	Template Per_SettlementType_T
-	{
-		parameter<string> SettlementType_name; 
-		///
-
-		container Per_Continent :=
-			for_each_ne(
-				continents/name
-				,'Traveltime_PerContinent_T(
-					'+quote(continents/label)+
-					',/NetworkSetup/Per_SettlementType/'+SettlementType_name+'/OrgDest_Per_Continent/'+continents/label+'/select'  //orgs
-					',/NetworkSetup/Per_SettlementType/'+SettlementType_name+'/OrgDest_Per_Continent/'+continents/label+'/select'  //dests
-					',/NetworkSetup/Per_SettlementType/'+SettlementType_name+'/Per_Continent/'+continents/label+'/NetwerkSpec'
-				')'
-			);
-	} 
 	
-	Template Traveltime_PerContinent_T
+	container Obtain_Settlement_Hierarchies:= for_each_ne(Continents/Name, 
+		'Settlement_Hierarchy_T('+quote(Continents/label)+
+		', NetworkSetup/Settlements_Per_Continent/'+Continents/name+'/Select'    //orgs
+		', NetworkSetup/Settlements_Per_Continent/'+Continents/name+'/Select'  
+		', NetworkSetup/Per_Continent/'+Continents/Name+'/NetwerkSpec/CreateMoreEfficientNetwork'
+		')');
+
+	
+	Template Settlement_Hierarchy_T
 	{
 		parameter<string> Continent_name;
 		unit<uint32>      Org;
@@ -31,8 +17,16 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata"
 		container         NetwerkSpec;
 		///
 
-		unit<uint32> FinalLinkSet := NetwerkSpec/CreateMoreEfficientNetwork/FinalLinkSet;
-		unit<uint32> FinalNodeSet := NetwerkSpec/CreateMoreEfficientNetwork/FinalNodeSet;
+		unit<uint32> FinalLinkSet := NetwerkSpec/FinalLinkSet_Read;
+		unit<uint32> FinalNodeSet := NetwerkSpec/FinalNodeSet_Read;
+		
+		attribute<FinalNodeSet> Org_NodeId (Org):= rlookup(Org/centroid, FinalNodeSet/geometry);
+		
+		unit<uint32> Conn_Orgs:= subset(IsDefined(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" {
+			attribute<BaseProjection> centroid:= Org/centroid[Nr_OrgEntity];
+			attribute<FinalNodeSet> NodeId:= Org_NodeId[Nr_OrgEntity];
+			attribute<float32> population:= Org/population[Nr_OrgEntity];
+		}
 		
 		unit<uint64> OD_matrix :=
 			impedance_matrix_od64('bidirectional(link_flag);startPoint(Node_rel);endPoint(Node_rel);cut(OrgZone_max_imp);od:impedance,OrgZone_rel,DstZone_rel'
@@ -41,9 +35,13 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata"
 				, FinalLinkSet/F2
 				
 				, !FinalLinkSet/IsOneDirection
-				, FinalNodeSet/OrgNode_rel 
-				, FinalNodeSet/DestNode_rel 
+				, Conn_Orgs/NodeId 
+				, Conn_Orgs/NodeId 
 				, convert(ModelParameters/MaxTravelTime, s_f) //cut impedance
-			);
+			) {
+				attribute<float32> pop_i:= Conn_Orgs/population[OrgZone_rel];
+				attribute<float32> pop_j:= Conn_Orgs/population[DstZone_rel];
+			
+			}
 	}
 }

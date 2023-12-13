@@ -38,6 +38,8 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications"
 			attribute<WGS84>     centroid    := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/centroid)';
 			attribute<float32>   population  := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)[float32]';
 			attribute<sep_units> sepunit_rel := point_in_polygon(centroid, sep_units/geometry_LL);
+			
+			parameter<string> refname:= 'grids_1km';
 		}
 		unit<uint32> Countries := ='select_with_attr_by_cond(inCountries, inCountries/Continents_rel == Continents/v/'+Continent_name+')' 
 		{
@@ -73,6 +75,7 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications"
 			attribute<WGS84>   centroid           := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/centroid)';
 			attribute<float32> population         := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)';
 			
+			parameter<string> refname:= 'all_settlements';
 			//collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/GridData)
 		}
 	}
@@ -85,6 +88,9 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications"
 		///
 		unit<uint32>      RoadDomain_src := ='SourceData/Infrastructure/OSM/Per_Continent/'+Continent_name+'';
 		
+		parameter<string> OrgName:= Org/refname;
+		parameter<string> DestName:= Dest/refname;
+		
 		
 		container NetwerkSpec :=
 			Templates/CreateNetwork_T(
@@ -92,5 +98,9 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications"
 				, dest
 				, RoadDomain_src
 			);
+			
+		parameter<bool> Store_Network1:= True, explicitsuppliers = "NetwerkSpec/CreateInitialWorkingNetwork/LinkSet_Write;";
+		parameter<bool> Store_Network2:= True, explicitsuppliers = "NetwerkSpec/CreateMoreEfficientNetwork/FinalNodeSet_Write;NetwerkSpec/CreateMoreEfficientNetwork/FinalLinkSet_Write;";
+		
 	}
 }
