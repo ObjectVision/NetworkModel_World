@@ -45,25 +45,30 @@ container Templates: Using = "Units;Classifications;geometries"
 		
 		container CreateInitialWorkingNetwork
 		{
-			unit<uint32> Roads := arc2segm(RoadDomain0/geometry)
+			unit<uint32> Roads := RoadDomain0
 			{
-				attribute<km_hr>              KPH                  := sequence_rel->KPH;
-				attribute<bool>               IsOneDirection       := sequence_rel->IsOneDirection;
-				attribute<bool>               Connectable          := sequence_rel->Connectable;
+				attribute<BaseProjection> geometry (arc)                  := RoadDomain0/geometry;
+				
+				attribute<km_hr>              KPH                  := RoadDomain0/KPH;
+				attribute<bool>               IsOneDirection       := RoadDomain0/IsOneDirection;
+				attribute<bool>               Connectable          := RoadDomain0/Connectable;
+				
+				attribute<BaseProjection>  first_point          := first_point(geometry);
+				attribute<BaseProjection>  last_point           := last_point(geometry); 
+				
 				unit<uint32> PointSet := union_unit(., .)
 				{
-					attribute<BaseProjection>   geometry     := union_data(., point, NextPoint);
+					attribute<BaseProjection>   geometry     := union_data(., first_point, last_point);
 				}
 				unit<uint32> UqGeomPointSet := unique(PointSet/geometry)
 				{ 
 					attribute<BaseProjection> geometry := values;
 				}
-				attribute<UqGeomPointSet> F1 := rlookup(point, UqGeomPointSet/values);
-				attribute<UqGeomPointSet> F2 := rlookup(nextpoint, UqGeomPointSet/values);
+				attribute<UqGeomPointSet> F1 := rlookup(first_point, UqGeomPointSet/values);
+				attribute<UqGeomPointSet> F2 := rlookup(last_point, UqGeomPointSet/values);
 				
 				// for checking and visualisation only
 				container Connectiveness := Templates/Check_Connectiveness_T_seldomain(.,UqGeomPointSet, F1, F2, RoadSelDomain, RoadSelDomain/Geometry_LL);
-				attribute<BaseProjection> geometry(arc) := points2sequence(PointSet/geometry, convert(id(PointSet) % #., .));
 			}
 			
 			unit<uint32> Roads_Connected := select_with_attr_by_cond(Roads, Roads/Connectiveness/IsVerbonden);
@@ -72,9 +77,9 @@ container Templates: Using = "Units;Classifications;geometries"
 			{
 				attribute<km_hr>           KPH                  := MakeDefined(arc_rel->KPH, ModelParameters/Advanced/CarDefaultSpeed_low);
 				attribute<bool>            IsOneDirection       := arc_rel->IsOneDirection;
-				attribute<BaseProjection>  first_point          := first_point(geometry); //OD point   --> vanwege directions hoeft deze niet te klopppen...
-				attribute<BaseProjection>  last_point           := last_point(geometry);  //May or may not be an existing network node, otherwise it is a new node
-				attribute<bool>            IsOD_connection_road := !IsDefined(arc_rel); // connect gives arc_rel which gives the rel to the original link, in case of existing link. Is new link, this is undefined.
+				attribute<BaseProjection>  first_point          := first_point(geometry); // OD point   --> vanwege directions hoeft deze niet te klopppen...
+				attribute<BaseProjection>  last_point           := last_point(geometry);  // May or may not be an existing network node, otherwise it is a new node
+				attribute<bool>            IsOD_connection_road := !IsDefined(arc_rel);   // connect gives arc_rel which gives the rel to the original link, in case of existing link. Is new link, this is undefined.
 				
 				// For visualisation
 				attribute<BaseProjection>                  geometry (arc)                 := points2sequence(PointSet/Point, PointSet/SeqNr, PointSet/Ordinal);
@@ -141,11 +146,7 @@ container Templates: Using = "Units;Classifications;geometries"
 			}
 			
 			unit<uint32> LinkSet_src     := CreateInitialWorkingNetwork/LinkSet;
-			unit<uint32> NodeSet_src     := CreateInitialWorkingNetwork/NodeSet
-			{
-//				attribute<BaseProjection_ip> geometry      := CreateInitialWorkingNetwork/NodeSet/geometry;
-				// attribute<bool>              WillBeDeleted := (pcount(FinalLinkSet/F1) + pcount(FinalLinkSet/F2)) == 0;
-			}
+			unit<uint32> NodeSet_src     := CreateInitialWorkingNetwork/NodeSet;
 
 			unit<uint64> Nodeset_x_NodeSet := combine_unit_uint64(NodeSet_src, NodeSet_src);
 			
@@ -188,21 +189,6 @@ container Templates: Using = "Units;Classifications;geometries"
 				}
 				
 				unit<uint32> Without_OD_connection_roads := select_with_attr_by_org_rel(.,!IsOD_connection_road);
-				
-				// unit<uint32> Export := Without_OD_connection_roads
-				// , StorageName = "='%LocalDataProjDir%/'+ProjName+'/'+ModelParameters/CountryFolder+'/Network_Cleaned_O-'+ModelParameters/OrgGridsize+'_D-'+/ModelParameters/DestGridsize+'_'+expand(., '%DateTime%')+'.gpkg'"
-				// , StorageType = "gdalwrite.vect"
-				// {
-					// attribute<BaseProjection> geometry     (arc) := Without_OD_connection_roads/geometry;
-					// attribute<float32>        Impedance          := float32(Without_OD_connection_roads/Impedance);
-					// attribute<float32>        LengthKm           := float32(Without_OD_connection_roads/LengthKm);
-					// attribute<float32>        IsOneDir           := float32(Without_OD_connection_roads/IsOneDirection);
-				// }
-				
-				// container store 
-				// {
-					// parameter<bool>    store                    :=  True, explicitsuppliers = "Export";
-				// }
 			}
 			
 			
