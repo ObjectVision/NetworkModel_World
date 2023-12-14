@@ -22,6 +22,8 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata"
 		
 		attribute<FinalNodeSet> Org_NodeId (Org):= rlookup(Org/centroid, FinalNodeSet/geometry);
 		
+		unit<uint32> Unconn_Orgs:= subset(IsNull(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" {attribute<BaseProjection> centroid:= Org/centroid[Nr_OrgEntity];}
+		
 		unit<uint32> Conn_Orgs:= subset(IsDefined(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" {
 			attribute<BaseProjection> centroid:= Org/centroid[Nr_OrgEntity];
 			attribute<FinalNodeSet> NodeId:= Org_NodeId[Nr_OrgEntity];
@@ -41,7 +43,8 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata"
 			) {
 				attribute<float32> pop_i:= Conn_Orgs/population[OrgZone_rel];
 				attribute<float32> pop_j:= Conn_Orgs/population[DstZone_rel];
-			
+				
+				
 			}
 	}
 }

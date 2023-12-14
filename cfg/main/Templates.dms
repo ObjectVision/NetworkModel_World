@@ -47,23 +47,27 @@ container Templates: Using = "Units;Classifications;geometries"
 		
 		container CreateInitialWorkingNetwork
 		{
-			unit<uint32> Roads := RoadDomain0
+			unit<uint32> Roads := arc2segm(RoadDomain0/geometry)
 			{
-				attribute<BaseProjection> geometry (arc)                  := RoadDomain0/geometry;
+				attribute<km_hr>              KPH                  := sequence_rel->KPH;
+				attribute<bool>               IsOneDirection       := sequence_rel->IsOneDirection;
+				attribute<bool>               Connectable          := sequence_rel->Connectable;
 				
-				attribute<km_hr>              KPH                  := RoadDomain0/KPH;
-				attribute<bool>               IsOneDirection       := RoadDomain0/IsOneDirection;
-				attribute<bool>               Connectable          := RoadDomain0/Connectable;
+				//attribute<BaseProjection> geometry (arc)                  := RoadDomain0/geometry;
 				
-				attribute<BaseProjection>  first_point          := first_point(geometry);
-				attribute<BaseProjection>  last_point           := last_point(geometry); 
+				//attribute<km_hr>              KPH                  := RoadDomain0/KPH;
+				//attribute<bool>               IsOneDirection       := RoadDomain0/IsOneDirection;
+				//attribute<bool>               Connectable          := RoadDomain0/Connectable;
 				
-				attribute<Geometries/WebMercator_base> point_wm	   := convert(point(PointCol(first_point), PointRow(first_point))[BaseProjection], Geometries/WebMercator_base); // convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WorldMollweide);
-				attribute<Geometries/WebMercator_base> nextpoint_wm  := convert(point(PointCol(last_point), PointRow(last_point))[BaseProjection], Geometries/WebMercator_base);
+				//attribute<BaseProjection>  first_point          := first_point(geometry);
+				//attribute<BaseProjection>  last_point           := last_point(geometry); 
+				
+				attribute<Geometries/WebMercator_base> point_wm	   := convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WebMercator_base); // convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WorldMollweide);
+				attribute<Geometries/WebMercator_base> nextpoint_wm  := convert(point(PointCol(nextpoint), PointRow(nextpoint))[BaseProjection], Geometries/WebMercator_base);
 				
 				unit<uint32> PointSet := union_unit(., .)
 				{
-					attribute<BaseProjection>   geometry     := union_data(., first_point, last_point);
+					attribute<BaseProjection>   geometry     := union_data(., point, nextpoint);
 					attribute<Geometries/WebMercator_base> geometry_wm:= union_data(., point_wm, nextpoint_wm);
 				}
 				unit<uint32> UqGeomPointSet := unique(PointSet/geometry_wm)
@@ -80,6 +84,7 @@ container Templates: Using = "Units;Classifications;geometries"
 				
 				// for checking and visualisation only
 				container Connectiveness := Templates/Check_Connectiveness_T_seldomain(.,UqGeomPointSet, F1, F2, RoadSelDomain, RoadSelDomain/Geometry_LL);
+				attribute<BaseProjection> geometry (arc) := points2sequence(PointSet/geometry, convert(id(PointSet) % #., .));
 				attribute<Geometries/WebMercator_base> geometry_wm(arc) := points2sequence(PointSet/geometry_wm, convert(id(PointSet) % #., .));
 			}
 			
@@ -511,6 +516,8 @@ container Templates: Using = "Units;Classifications;geometries"
 			attribute<seldomain>Seldomain_rel:= pointcol(values)[seldomain];
 			attribute<uint32> Nr_nodes_in_both:= pcount(nps_rel);
 			attribute<uint32> Nr_nodes_in_network:= Nr_nodes_in_both > 0 ? Networks/Nr_Nodes[Network_rel] : 0 / 0;
+			attribute<bool>	  Main_in_seldomain:= 		id(.) = max_index(Nr_nodes_in_both, Seldomain_rel)[seldomain_rel];
+			attribute<bool>	  Main_touching_seldomain:= id(.) = max_index(Nr_nodes_in_network, Seldomain_rel)[seldomain_rel];
 		}
 		///
 		
