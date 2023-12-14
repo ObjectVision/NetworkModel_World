@@ -1,4 +1,4 @@
-container Analyses: Using = "Units;Classifications;geometries;sourcedata" 
+container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceData/RegionalUnits;" 
 {  
 	
 	container Obtain_Settlement_Hierarchies:= for_each_ne(Continents/Name, 
@@ -6,7 +6,15 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata"
 		', NetworkSetup/Settlements_Per_Continent/'+Continents/name+'/Select'    //orgs
 		', NetworkSetup/Settlements_Per_Continent/'+Continents/name+'/Select'  
 		', NetworkSetup/Per_Continent/'+Continents/Name+'/NetwerkSpec/CreateMoreEfficientNetwork'
-		')');
+		')') {
+			
+			unit<uint32> thresholds: nrofrows= 25 {
+				attribute<float32> num: expr = "float32(id(.)) * 5f";
+				attribute<string>  padnum: expr = "num < 10f ? '0' + string(num) : string(num)";
+				attribute<string>  ns:	 expr = "string(num)+'f'";
+				attribute<string>  name: expr = "'L_'+padnum+'min'";
+			}
+		}
 
 	
 	Template Settlement_Hierarchy_T
@@ -20,14 +28,18 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata"
 		unit<uint32> FinalLinkSet := NetwerkSpec/FinalLinkSet_Read;
 		unit<uint32> FinalNodeSet := NetwerkSpec/FinalNodeSet_Read;
 		
-		attribute<FinalNodeSet> Org_NodeId (Org):= rlookup(Org/centroid, FinalNodeSet/geometry);
+		attribute<Geometries/WebMercator_base> Org_centroid_wm (Org):= convert(point(PointCol(Org/centroid), PointRow(Org/centroid))[BaseProjection], Geometries/WebMercator_base);
+		attribute<FinalNodeSet> Closest_node (Org):= connect(FinalNodeSet/geometry_wm, Org_centroid_wm);
+		attribute<bool>			Close_enough (Org):= dist(Org_centroid_wm, FinalNodeSet/geometry_wm[Closest_node]) < 100d;
+		attribute<FinalNodeSet> Org_NodeId (Org):= Close_enough ? Closest_node : const(0 / 0, Org, FinalNodeSet);
 		
-		unit<uint32> Unconn_Orgs:= subset(IsNull(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" {attribute<BaseProjection> centroid:= Org/centroid[Nr_OrgEntity];}
+		unit<uint32> Unconnected_Settlements:= subset(IsNull(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" {attribute<BaseProjection> centroid:= Org/centroid[Nr_OrgEntity];}
 		
-		unit<uint32> Conn_Orgs:= subset(IsDefined(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" {
+		unit<uint32> Connected_Settlements:= subset(IsDefined(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" {
 			attribute<BaseProjection> centroid:= Org/centroid[Nr_OrgEntity];
 			attribute<FinalNodeSet> NodeId:= Org_NodeId[Nr_OrgEntity];
 			attribute<float32> population:= Org/population[Nr_OrgEntity];
+			attribute<Countries> Country_rel:= Org/Country_rel[Nr_OrgEntity];
 		}
 		
 		unit<uint64> OD_matrix :=
@@ -37,13 +49,25 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata"
 				, FinalLinkSet/F2
 				
 				, !FinalLinkSet/IsOneDirection
-				, Conn_Orgs/NodeId 
-				, Conn_Orgs/NodeId 
-				, convert(ModelParameters/MaxTravelTime, s_f) //cut impedance
+				, Connected_Settlements/NodeId 
+				, Connected_Settlements/NodeId 
+				, convert(max(thresholds/num), s_f) //cut impedance
 			) {
-				attribute<float32> pop_i:= Conn_Orgs/population[OrgZone_rel];
-				attribute<float32> pop_j:= Conn_Orgs/population[DstZone_rel];
-				
+				attribute<float32> pop_i:= Connected_Settlements/population[OrgZone_rel];
+				attribute<float32> pop_j:= Connected_Settlements/population[DstZone_rel];
+			}
+			
+			parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Hierarchy/'+Continent_Name;
+			
+			container biggest_centre:= for_each_nedva(thresholds/name,  	'uint32(id(Connected_Settlements) = OD_matrix/DstZone_rel[max_index(OD_matrix/pop_j * float32(float32(OD_matrix/impedance) <= '+thresholds/ns+'), OD_matrix/OrgZone_rel)])', Connected_Settlements, uint32, filepath+'.dbf');
+			
+			unit<uint32> Hierarchies_write:= Connected_Settlements, storagename = "= filepath+'.dbf'" {
+				attribute<BaseProjection> poly (poly):= Org/Geometry_LL[Nr_OrgEntity], storagename = "= filepath+'.shp'";
+				attribute<string>	LabelText:= Org/LabelText[Nr_OrgEntity];
+				attribute<uint32> 	CountryId:= Country_rel;
+				attribute<string> 	Country:= Countries/LabelText[Country_rel];
+				attribute<float32>	Pop:= population;
+				attribute<uint32> 	Maxl:= = 'max_elem('+AsItemList('(biggest_centre/'+thresholds/name+' * uint32('+string(thresholds/num)+'))')+')';
 				
 			}
 	}
