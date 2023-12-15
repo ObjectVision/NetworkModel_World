@@ -36,8 +36,8 @@ container Templates: Using = "Units;Classifications;geometries"
 		unit<uint32> UniqueLocations    := unique(Locations/geometry) 
 		{ 
 			attribute<BaseProjection>               geometry       := values;
-			attribute<Geometries/WorldMollweide>	geometry_mw	   := convert(point(PointCol(geometry), PointRow(geometry))[BaseProjection], Geometries/WorldMollweide);
-			attribute<Geometries/WebMercator_base>	geometry_wm	   := convert(point(PointCol(geometry), PointRow(geometry))[BaseProjection], Geometries/WebMercator_base);
+			attribute<Geometries/WorldMollweide>    geometry_mw    := convert(point(PointCol(geometry), PointRow(geometry))[BaseProjection], Geometries/WorldMollweide);
+			attribute<WebMercator>                  geometry_wm    := convert(point(PointCol(geometry), PointRow(geometry))[BaseProjection], WebMercator);
 			attribute<Locations>                    Locations_rel  := rlookup(geometry, Locations/geometry);
 			attribute<OrgDomain>                    OrgDomain_rel  := rlookup(geometry, OrgLocations);
 			attribute<DestDomain>                   DestDomain_rel := rlookup(geometry, DestLocations);
@@ -62,19 +62,19 @@ container Templates: Using = "Units;Classifications;geometries"
 				//attribute<BaseProjection>  first_point          := first_point(geometry);
 				//attribute<BaseProjection>  last_point           := last_point(geometry); 
 				
-				attribute<Geometries/WebMercator_base> point_wm	   := convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WebMercator_base); // convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WorldMollweide);
-				attribute<Geometries/WebMercator_base> nextpoint_wm  := convert(point(PointCol(nextpoint), PointRow(nextpoint))[BaseProjection], Geometries/WebMercator_base);
+				attribute<WebMercator> point_wm       := convert(point(PointCol(point), PointRow(point))[BaseProjection], WebMercator); // convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WorldMollweide);
+				attribute<WebMercator> nextpoint_wm   := convert(point(PointCol(nextpoint), PointRow(nextpoint))[BaseProjection], WebMercator);
 				
 				unit<uint32> PointSet := union_unit(., .)
 				{
 					attribute<BaseProjection>   geometry     := union_data(., point, nextpoint);
-					attribute<Geometries/WebMercator_base> geometry_wm:= union_data(., point_wm, nextpoint_wm);
+					attribute<WebMercator>      geometry_wm  := union_data(., point_wm, nextpoint_wm);
 				}
 				unit<uint32> UqGeomPointSet := unique(PointSet/geometry_wm)
 				{ 
-					attribute<BaseProjection> 	geometry_LL:= PointSet/geometry[pointrel]; //
-					attribute<Geometries/WebMercator_base> geometry_wm := values;
-					attribute<PointSet>			pointrel:= rlookup(geometry_wm, PointSet/geometry_wm);
+					attribute<BaseProjection>   geometry_LL  := PointSet/geometry[pointrel]; //
+					attribute<WebMercator>      geometry_wm  := values;
+					attribute<PointSet>         pointrel     := rlookup(geometry_wm, PointSet/geometry_wm);
 					
 				}
 				//attribute<UqGeomPointSet> F1 := rlookup(point, UqGeomPointSet/values);
@@ -84,8 +84,8 @@ container Templates: Using = "Units;Classifications;geometries"
 				
 				// for checking and visualisation only
 				container Connectiveness := Templates/Check_Connectiveness_T_seldomain(.,UqGeomPointSet, F1, F2, RoadSelDomain, RoadSelDomain/Geometry_LL);
-				attribute<BaseProjection> geometry (arc) := points2sequence(PointSet/geometry, convert(id(PointSet) % #., .));
-				attribute<Geometries/WebMercator_base> geometry_wm(arc) := points2sequence(PointSet/geometry_wm, convert(id(PointSet) % #., .));
+				attribute<BaseProjection>  geometry    (arc) := points2sequence(PointSet/geometry, convert(id(PointSet) % #., .));
+				attribute<WebMercator>     geometry_wm (arc) := points2sequence(PointSet/geometry_wm, convert(id(PointSet) % #., .));
 			}
 			
 			unit<uint32> Roads_Connected := select_with_attr_by_cond(Roads, Roads/Connectiveness/IsVerbonden);
@@ -96,19 +96,19 @@ container Templates: Using = "Units;Classifications;geometries"
 				attribute<bool>            IsOneDirection       := arc_rel->IsOneDirection;
 				//attribute<BaseProjection>  first_point          := point(PointCol(fp_wm[BaseProjection]), PointRow(fp_wm[BaseProjection]))[BaseProjection]; //OD point   --> vanwege directions hoeft deze niet te klopppen... 
 				//attribute<BaseProjection>  last_point           := point(PointCol(lp_wm[BaseProjection]), PointRow(lp_wm[BaseProjection]))[BaseProjection];  //May or may not be an existing network node, otherwise it is a new node
-				//attribute<Geometries/WorldMollweide> fp_mw		:= convert(first_point, Geometries/WorldMollweide);
-				//attribute<Geometries/WorldMollweide> lp_mw		:= convert(last_point, Geometries/WorldMollweide);
-				attribute<Geometries/WebMercator_base> first_point		:= first_point(UnionData);
-				attribute<Geometries/WebMercator_base> last_point		:= last_point(UnionData);
+				//attribute<Geometries/WorldMollweide> fp_mw      := convert(first_point, Geometries/WorldMollweide);
+				//attribute<Geometries/WorldMollweide> lp_mw      := convert(last_point, Geometries/WorldMollweide);
+				attribute<WebMercator>     first_point          := first_point(UnionData);
+				attribute<WebMercator>     last_point           := last_point(UnionData);
 				attribute<bool>            IsOD_connection_road := !IsDefined(arc_rel); // connect gives arc_rel which gives the rel to the original link, in case of existing link. Is new link, this is undefined.
 				
 				// For visualisation
 				//attribute<BaseProjection>                  geometry_mw (arc)                 := points2sequence(PointSet/Point[BaseProjection], PointSet/SeqNr, PointSet/Ordinal);
 				unit<uint32> PointSet := union_unit(.,.)
 				{
-					attribute<Geometries/WebMercator_base>  Point   := Union_Data(., ../first_point, ../last_point);
-					attribute<..>                          	SeqNr   := value(id(.) % nrofrows(..), ..);
-					attribute<uint32>                      	Ordinal := id(.) / nrofrows(..);
+					attribute<WebMercator> Point   := Union_Data(., ../first_point, ../last_point);
+					attribute<..>          SeqNr   := value(id(.) % nrofrows(..), ..);
+					attribute<uint32>      Ordinal := id(.) / nrofrows(..);
 				}
 				
 				attribute<km>              LengthKm       := convert(dist(first_point, last_point)[m], km);
@@ -117,45 +117,46 @@ container Templates: Using = "Units;Classifications;geometries"
 
 			/*unit<uint32> NodeSet := unique(union_data(LinkSet/PointSet, LinkSet/first_point, LinkSet/last_point))
 			{
-				attribute<Geometries/WebMercator_base> geometry := values;
+				attribute<WebMercator> geometry := values;
 				attribute<uint32> NrConnectedLinks := pcount(LinkSet/F1) + pcount(LinkSet/F2);
 			}*/
 			unit<uint32> LinkSet_Write := LinkSet,	StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Linkset_O-'+OrgName+'_D-'+Destname+'.fss'"
 			{
 				attribute<km_hr>           KPH                  := LinkSet/KPH;
-				attribute<km>			   LengthKm				:= LinkSet/LengthKm;
+				attribute<km>              LengthKm             := LinkSet/LengthKm;
 				//attribute<bool>            IsOneDirection       := LinkSet/IsOneDirection;
 				attribute<bool>            IsOneDirection       := const(False,.,bool); // don't trust digitization and onedirectional attributes yet.
-				attribute<Geometries/WebMercator_base>  first_point          := LinkSet/first_point; 
-				attribute<Geometries/WebMercator_base>  last_point           := LinkSet/last_point; 
+				attribute<WebMercator>     first_point          := LinkSet/first_point; 
+				attribute<WebMercator>     last_point           := LinkSet/last_point; 
 				attribute<bool>            IsOD_connection_road := LinkSet/IsOD_connection_road;
 			}
 			
 			unit<uint32> LinkSet_Read: StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Linkset_O-'+OrgName+'_D-'+Destname+'.fss'", StorageReadOnly = "True", dialogdata = "geometry_LL", dialogtype = "map"
 			{
-				attribute<km_hr>           KPH;
-				attribute<km>			   LengthKm;
-				attribute<bool>            IsOneDirection;
-				attribute<Geometries/WebMercator_base>  first_point;
-				attribute<Geometries/WebMercator_base>  last_point;
-				attribute<bool>            IsOD_connection_road;
-				attribute<min_f>           Minutes        		:= MakeDefined(convert((LengthKm / KPH), min_f), 0.0001[min_f]);
-				attribute<s_f>             impedance      := convert(minutes, s_f) + Float64(CorrectImpedanceForCrossroads/impedance_Start + CorrectImpedanceForCrossroads/impedance_End);
-				attribute<Geometries/WebMercator_base>  geometry (arc)    := points2sequence(PointSet_fromRead/Point[Geometries/WebMercator_base], PointSet_fromRead/SeqNr, PointSet_fromRead/Ordinal);
-				attribute<NodeSet_fromRead>         F1             		:= rlookup(first_point, NodeSet_fromRead/Values); //node from the OD towards the network
-				attribute<NodeSet_fromRead>         F2             		:= rlookup(last_point,  NodeSet_fromRead/Values); //network node to which the the OD is connected 
+				attribute<km_hr>            KPH;
+				attribute<km>               LengthKm;
+				attribute<bool>             IsOneDirection;
+				attribute<WebMercator>      first_point;
+				attribute<WebMercator>      last_point;
+				attribute<bool>             IsOD_connection_road;
+				attribute<min_f>            Minutes               := MakeDefined(convert((LengthKm / KPH), min_f), 0.0001[min_f]);
+				attribute<s_f>              impedance             := convert(minutes, s_f) + Float64(CorrectImpedanceForCrossroads/impedance_Start + CorrectImpedanceForCrossroads/impedance_End);
+				attribute<WebMercator>      geometry (arc)        := points2sequence(PointSet_fromRead/Point[WebMercator], PointSet_fromRead/SeqNr, PointSet_fromRead/Ordinal);
+				attribute<NodeSet_fromRead> F1                    := rlookup(first_point, NodeSet_fromRead/Values); //node from the OD towards the network
+				attribute<NodeSet_fromRead> F2                    := rlookup(last_point,  NodeSet_fromRead/Values); //network node to which the the OD is connected 
 				
-				unit<uint32> PointSet_fromRead:= union_unit(LinkSet_Read, LinkSet_Read) {
-					attribute<Geometries/WebMercator_base>     	Point   := Union_Data(., ../first_point, ../last_point);
-					attribute<..>                          		SeqNr   := value(id(.) % nrofrows(..), ..);
-					attribute<uint32>                      		Ordinal := id(.) / nrofrows(..);
+				unit<uint32> PointSet_fromRead:= union_unit(LinkSet_Read, LinkSet_Read)
+				{
+					attribute<WebMercator>  Point   := Union_Data(., ../first_point, ../last_point);
+					attribute<..>           SeqNr   := value(id(.) % nrofrows(..), ..);
+					attribute<uint32>       Ordinal := id(.) / nrofrows(..);
 				}
 				unit<uint32> NodeSet_fromRead := unique(PointSet_fromRead/Point)
 				{
-					attribute<Geometries/WebMercator_base> geometry := values;
-					attribute<uint32> NrConnectedLinks := pcount(../F1) + pcount(../F2);
+					attribute<WebMercator>  geometry         := values;
+					attribute<uint32>       NrConnectedLinks := pcount(../F1) + pcount(../F2);
 				}
-			}			
+			}
 			
  			container CorrectImpedanceForCrossroads
 			// hiermee wordt voor ieder begin en eind node het aantal geconnecte links bepaald
@@ -217,45 +218,46 @@ container Templates: Using = "Units;Classifications;geometries"
 			// hardstore optimised network and nodeset
 			unit<uint32> FinalNodeSet_Write := select_with_org_rel(pcount(LastLinkSet/F1)+pcount(LastLinkSet/F2) > 0),	StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Final_Nodeset_O-'+OrgName+'_D-'+Destname+'.fss'" 
 			{
-				attribute<Geometries/WebMercator_base> geometry := org_rel->values;
-				attribute<.> OrgNode_rel  (OrgDomain)  := rlookup(OrgDomain/centroid_wm,  geometry);
-				attribute<.> DestNode_rel (DestDomain) := rlookup(DestDomain/centroid_wm, geometry);	
+				attribute<WebMercator>        geometry                  := org_rel->values;
+				attribute<.>                  OrgNode_rel  (OrgDomain)  := rlookup(OrgDomain/centroid_wm,  geometry);
+				attribute<.>                  DestNode_rel (DestDomain) := rlookup(DestDomain/centroid_wm, geometry);	
 			}
 			unit<uint32> FinalLinkSet_Write := LastLinkSet,	StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Final_Linkset_O-'+OrgName+'_D-'+Destname+'.fss'" 
 			{
-				attribute<FinalNodeSet_Write> F1                  := invert(FinalNodeSet_Write/org_rel)[LastLinkSet/F1];
-				attribute<FinalNodeSet_Write> F2                  := invert(FinalNodeSet_Write/org_rel)[LastLinkSet/F2];
-				attribute<s_f>               Impedance            := LastLinkSet/Impedance;
-				attribute<km>                LengthKm             := LastLinkSet/LengthKm;
-				attribute<bool>              IsOneDirection       := LastLinkSet/IsOneDirection;
-				attribute<bool>              IsOD_connection_road := LastLinkSet/IsOD_connection_road;
+				attribute<FinalNodeSet_Write> F1                   := invert(FinalNodeSet_Write/org_rel)[LastLinkSet/F1];
+				attribute<FinalNodeSet_Write> F2                   := invert(FinalNodeSet_Write/org_rel)[LastLinkSet/F2];
+				attribute<s_f>                Impedance            := LastLinkSet/Impedance;
+				attribute<km>                 LengthKm             := LastLinkSet/LengthKm;
+				attribute<bool>               IsOneDirection       := LastLinkSet/IsOneDirection;
+				attribute<bool>               IsOD_connection_road := LastLinkSet/IsOD_connection_road;
 			}
 			
 			// read stored nodeset and links
-			unit<uint32> FinalNodeSet_Read : storagename = "= propvalue(FinalNodeSet_Write, 'StorageName')", StorageReadOnly = "True", dialogdata = "geometry", DialogType = "map" {
-				attribute<Geometries/WebMercator_base> geometry; 
-				//attribute<Geometries/WebMercator_base>	geometry_wm	   := convert(point(PointCol(geometry), PointRow(geometry))[BaseProjection], Geometries/WebMercator_base);
-				attribute<.> OrgNode_rel  (OrgDomain);
-				attribute<.> DestNode_rel (DestDomain);
+			unit<uint32> FinalNodeSet_Read : storagename = "= propvalue(FinalNodeSet_Write, 'StorageName')", StorageReadOnly = "True"
+			{
+				attribute<WebMercator>   geometry; 
+				// attribute<WebMercator>   geometry_wm  := convert(point(PointCol(geometry), PointRow(geometry))[BaseProjection], WebMercator);
+				attribute<.>             OrgNode_rel  (OrgDomain);
+				attribute<.>             DestNode_rel (DestDomain);
 			}
-			unit<uint32> FinalLinkSet_Read : StorageName = "= propvalue(FinalLinkSet_Write, 'StorageName')", StorageReadOnly = "True", dialogdata = "geometry", DialogType = "map"
+			unit<uint32> FinalLinkSet_Read : StorageName = "= propvalue(FinalLinkSet_Write, 'StorageName')", StorageReadOnly = "True"
 			{
 				attribute<FinalNodeSet_Read>      F1;
 				attribute<FinalNodeSet_Read>      F2;
-				attribute<s_f>               Impedance;
-				attribute<km>                LengthKm;
-				attribute<bool>              IsOneDirection;
-				attribute<bool>              IsOD_connection_road;
+				attribute<s_f>                    Impedance;
+				attribute<km>                     LengthKm;
+				attribute<bool>                   IsOneDirection;
+				attribute<bool>                   IsOD_connection_road;
 				
 				// For visualisation
-				attribute<Geometries/WebMercator_base>                  FirstPoint                     := FinalNodeSet_Read/Geometry[F1];
-				attribute<Geometries/WebMercator_base>                  LastPoint                      := FinalNodeSet_Read/Geometry[F2];
-				attribute<Geometries/WebMercator_base>                  geometry (arc)                 := points2sequence(PointSet/Point, PointSet/SeqNr, PointSet/Ordinal);
+				attribute<WebMercator>            FirstPoint                     := FinalNodeSet_Read/Geometry[F1];
+				attribute<WebMercator>            LastPoint                      := FinalNodeSet_Read/Geometry[F2];
+				attribute<WebMercator>            geometry (arc)                 := points2sequence(PointSet/Point, PointSet/SeqNr, PointSet/Ordinal);
 				unit<uint32> PointSet := union_unit(.,.)
 				{
-					attribute<Geometries/WebMercator_base>              Point   := Union_Data(., ../FirstPoint, ../LastPoint);
-					attribute<..>                          SeqNr   := value(id(.) % nrofrows(..), ..);
-					attribute<uint32>                      Ordinal := id(.) / nrofrows(..);
+					attribute<WebMercator>              Point   := Union_Data(., ../FirstPoint, ../LastPoint);
+					attribute<..>                       SeqNr   := value(id(.) % nrofrows(..), ..);
+					attribute<uint32>                   Ordinal := id(.) / nrofrows(..);
 				}
 				
 				unit<uint32> Without_OD_connection_roads := select_with_attr_by_org_rel(.,!IsOD_connection_road);
@@ -269,7 +271,7 @@ container Templates: Using = "Units;Classifications;geometries"
 				
 				unit<uint32> UniqueLocations := NetwerkSpec/UniqueLocations
 				{
-					attribute<NodeSet> Node_rel              		:= rlookup(geometry_wm, NodeSet/geometry); 
+					attribute<NodeSet> Node_rel                    := rlookup(geometry_wm, NodeSet/geometry); 
 					//attribute<NodeSet> Node_rel_connect			   := isdefined(Node_rel_exact) ? Node_rel_exact : connect(NodeSet/geometry_wm, geometry_wm);
 					//attribute<NodeSet> Node_rel					   := switch(case(isdefined(Node_rel_exact), Node_rel_exact), case(dist(geometry_wm, NodeSet/geometry_wm[Node_rel_connect]) < 10d, Node_rel_connect), Node_rel_exact);
 					attribute<LinkSet> Link_rel                    := rlookup(Node_rel, LinkSet/F1);
@@ -282,14 +284,14 @@ container Templates: Using = "Units;Classifications;geometries"
 				{
 					attribute<bool>                            IsPartOfJunctionFreeSection    := NodeSet/WillBeDeleted[F1] || NodeSet/WillBeDeleted[F2];
 					attribute<bool>                            IsInsideJunctionFreeSection    := NodeSet/WillBeDeleted[F1] && NodeSet/WillBeDeleted[F2];
-					attribute<bool>							   JFS_unavailable				  := (NodeSet/JFS_unavailable[F1] || NodeSet/JFS_unavailable[F2]) && IsPartOfJunctionFreeSection;
+					attribute<bool>                            JFS_unavailable                := (NodeSet/JFS_unavailable[F1] || NodeSet/JFS_unavailable[F2]) && IsPartOfJunctionFreeSection;
 					attribute<bool>                            IsOnBorderOfJunctionFreeSection:= IsPartOfJunctionFreeSection && !IsInsideJunctionFreeSection;
 					attribute<bool>                            IsFinalLink                    := !IsPartOfJunctionFreeSection || JFS_unavailable;
 					attribute<bool>                            IsOneDirection                 := PrevIntermediateLinkSet/IsOneDirection;
 					
 					// For visualisation
 					//attribute<BaseProjection_ip>               geometry (arc)                 := PrevIntermediateLinkSet/geometry[BaseProjection_ip];
-					attribute<Geometries/WebMercator_base>               geometry (arc)          := PrevIntermediateLinkSet/geometry;
+					attribute<WebMercator>               geometry (arc)          := PrevIntermediateLinkSet/geometry;
 				}
 				
 				unit<uint32> NodeSet  := NodeSet_src
@@ -304,7 +306,7 @@ container Templates: Using = "Units;Classifications;geometries"
 					//Forward relations
 					attribute<JunctionFreeSection_Check>       JunctionFreeSection_Check_rel  := ConnectedParts/JunctionFreeSection_Check_rel[ConnectedParts_rel];
 					attribute<JunctionFreeSection>             JunctionFreeSection_rel        := ConnectedParts/JunctionFreeSection_rel[ConnectedParts_rel];
-					attribute<bool>							   JFS_unavailable				  := ConnectedParts/JFS_unavailable[ConnectedParts_rel];
+					attribute<bool>                            JFS_unavailable                := ConnectedParts/JFS_unavailable[ConnectedParts_rel];
 					attribute<ConnectedParts>                  ConnectedParts_rel             := ConnectedParts/PartNr;
 					
 					//attribute<bool>                            IsOrgDest_location             := IsDefined(rlookup(values, UniqueLocations/Values));
@@ -313,7 +315,7 @@ container Templates: Using = "Units;Classifications;geometries"
 					attribute<bool>                            IsDeadEnd_and_NotOD            := NrConnectedLinks_in_LinkSet_cleanedforJFS == 1 && !IsOrgDest_location;
 					
 					// For visualisation
-					attribute<Geometries/WebMercator_base>               geometry                       := NodeSet_src/geometry;
+					attribute<WebMercator>                     geometry                       := NodeSet_src/geometry;
 				}
 
 				unit<uint32> LinksInsideJunctionFreeSection := select(LinkSet/IsInsideJunctionFreeSection), Descr = "Those links that are in the junction free section"
@@ -326,7 +328,7 @@ container Templates: Using = "Units;Classifications;geometries"
 					attribute<JunctionFreeSection>             JunctionFreeSection_rel        := NodeSet/JunctionFreeSection_rel[F1];
 					
 					//For visualisation
-					attribute<Geometries/WebMercator_base>                  geometry  (arc)                :=  collect_by_cond(LinksInsideJunctionFreeSection, LinkSet/IsInsideJunctionFreeSection, LinkSet/geometry);
+					attribute<WebMercator>                     geometry  (arc)                :=  collect_by_cond(LinksInsideJunctionFreeSection, LinkSet/IsInsideJunctionFreeSection, LinkSet/geometry);
 				}
 				
 				unit<uint32> ConnectedParts := connected_parts(LinksInsideJunctionFreeSection/F1, LinksInsideJunctionFreeSection/F2)
@@ -334,8 +336,8 @@ container Templates: Using = "Units;Classifications;geometries"
 					attribute<NodeSet>                         FirstNode_rel                   := invert(PartNr);
 					attribute<bool>                            IsJunctionFreeSection           := NodeSet/WillBeDeleted[FirstNode_rel];
 					attribute<JunctionFreeSection_Check>       JunctionFreeSection_Check_rel   := recollect_by_cond(ConnectedParts/IsJunctionFreeSection, ID(JunctionFreeSection_Check));
-					attribute<JunctionFreeSection>       	   JunctionFreeSection_rel   	   := JunctionFreeSection_Check/JFS_rel[JunctionFreeSection_Check_rel];
-					attribute<bool>						       JFS_unavailable		   		   := IsDefined(JunctionFreeSection_Check_rel) && IsNull(JunctionFreeSection_rel);
+					attribute<JunctionFreeSection>             JunctionFreeSection_rel         := JunctionFreeSection_Check/JFS_rel[JunctionFreeSection_Check_rel];
+					attribute<bool>                            JFS_unavailable                 := IsDefined(JunctionFreeSection_Check_rel) && IsNull(JunctionFreeSection_rel);
 				}
 				
 				unit<uint32> ConnectorLink := select_with_org_rel(LinkSet/IsOnBorderOfJunctionFreeSection)
@@ -347,20 +349,21 @@ container Templates: Using = "Units;Classifications;geometries"
 					attribute<NodeSet>                         F_keep                         := is_F1_deleted ? F2 : F1; // Unchanged Node
 					attribute<NodeSet>                         F_delete                       := is_F1_deleted ? F1 : F2; // Node in JunctionFreeSection
 					attribute<JunctionFreeSection_Check>       JunctionFreeSection_Check_rel  := NodeSet/JunctionFreeSection_Check_rel[F_delete];
-					attribute<JunctionFreeSection>			   JunctionFreeSection_rel		  := JunctionFreeSection_Check/JFS_rel[JunctionFreeSection_Check_rel];
+					attribute<JunctionFreeSection>             JunctionFreeSection_rel        := JunctionFreeSection_Check/JFS_rel[JunctionFreeSection_Check_rel];
 					attribute<NodeSet>                         NodeSet_rel                    := F_keep;
 					attribute<s_f>                             Impedance                      := LinkSet/Impedance[org_rel];
 					attribute<km>                              LengthKm                       := LinkSet/LengthKm[org_rel];
 					attribute<bool>                            IsOneDirection                 := LinkSet/IsOneDirection[org_rel];
 					
 					//For visualisation
-					attribute<Geometries/WebMercator_base>               geometry  (arc)                := LinkSet/geometry[org_rel];
+					attribute<WebMercator>                     geometry  (arc)                := LinkSet/geometry[org_rel];
 				}
 				
 				// first test for empty junctionfreesections (reason unknown)
-				unit<uint32> JunctionFreeSection_Check:= select(ConnectedParts/IsJunctionFreeSection) {
-					attribute<uint32>						   Connector_count 	 			  := pcount(ConnectorLink/JunctionFreeSection_Check_rel);
-					attribute<JunctionFreeSection> 			   JFS_rel						  := invert(JunctionFreeSection/Nr_OrgEntity);
+				unit<uint32> JunctionFreeSection_Check:= select(ConnectedParts/IsJunctionFreeSection)
+				{
+					attribute<uint32>                          Connector_count                := pcount(ConnectorLink/JunctionFreeSection_Check_rel);
+					attribute<JunctionFreeSection>             JFS_rel                        := invert(JunctionFreeSection/Nr_OrgEntity);
 				}
 				
 				unit<uint32> JunctionFreeSection := subset(JunctionFreeSection_Check/Connector_count > 0)
@@ -395,12 +398,12 @@ container Templates: Using = "Units;Classifications;geometries"
 					attribute<bool>                            IsOD_connection_road               := const(FALSE,.);
 					
 					//For visualisation
-					attribute<Geometries/WebMercator_base>               FirstPoint                     := NodeSet/Geometry[F1];
-					attribute<Geometries/WebMercator_base>               LastPoint                      := NodeSet/Geometry[F2];
-					attribute<Geometries/WebMercator_base>               geometry (arc)                 := points2sequence(PointSet/Point, PointSet/SeqNr, PointSet/Ordinal);
+					attribute<WebMercator>                     FirstPoint                     := NodeSet/Geometry[F1];
+					attribute<WebMercator>                     LastPoint                      := NodeSet/Geometry[F2];
+					attribute<WebMercator>                     geometry (arc)                 := points2sequence(PointSet/Point, PointSet/SeqNr, PointSet/Ordinal);
 					unit<uint32> PointSet := union_unit(.,.)
 					{
-						attribute<Geometries/WebMercator_base>           Point   := Union_Data(., ../FirstPoint, ../LastPoint);
+						attribute<WebMercator>                 Point   := Union_Data(., ../FirstPoint, ../LastPoint);
 						attribute<..>                          SeqNr   := value(id(.) % nrofrows(..), ..);
 						attribute<uint32>                      Ordinal := id(.) / nrofrows(..);
 					}
@@ -418,12 +421,12 @@ container Templates: Using = "Units;Classifications;geometries"
 					attribute<bool>                            IsOD_connection_road           := LinkSet/IsOD_connection_road[org_rel];
 					
 					//For visualisation
-					attribute<Geometries/WebMercator_base>                  FirstPoint                     := NodeSet/geometry[F1];
-					attribute<Geometries/WebMercator_base>                  LastPoint                      := NodeSet/geometry[F2];
-					attribute<Geometries/WebMercator_base>                  geometry (arc)                 := points2sequence(PointSet/Point, PointSet/SeqNr, PointSet/Ordinal);
+					attribute<WebMercator>                     FirstPoint                     := NodeSet/geometry[F1];
+					attribute<WebMercator>                     LastPoint                      := NodeSet/geometry[F2];
+					attribute<WebMercator>                     geometry (arc)                 := points2sequence(PointSet/Point, PointSet/SeqNr, PointSet/Ordinal);
 					unit<uint32> PointSet := union_unit(.,.)
 					{
-						attribute<Geometries/WebMercator_base>              Point   := Union_Data(., ../FirstPoint, ../LastPoint);
+						attribute<WebMercator>                 Point   := Union_Data(., ../FirstPoint, ../LastPoint);
 						attribute<..>                          SeqNr   := value(id(.) % nrofrows(..), ..);
 						attribute<uint32>                      Ordinal := id(.) / nrofrows(..);
 					}
@@ -462,14 +465,14 @@ container Templates: Using = "Units;Classifications;geometries"
 					}
 					
 					//For visualisation
-					attribute<Geometries/WebMercator_base>                  FirstPoint                     := NodeSet/geometry[F1];
-					attribute<Geometries/WebMercator_base>                  LastPoint                      := NodeSet/geometry[F2];
-					attribute<Geometries/WebMercator_base>                  geometry (arc)                 := points2sequence(PointSet/Point, PointSet/SeqNr, PointSet/Ordinal);
+					attribute<WebMercator>                  FirstPoint                     := NodeSet/geometry[F1];
+					attribute<WebMercator>                  LastPoint                      := NodeSet/geometry[F2];
+					attribute<WebMercator>                  geometry (arc)                 := points2sequence(PointSet/Point, PointSet/SeqNr, PointSet/Ordinal);
 					unit<uint32> PointSet := union_unit(.,.)
 					{
-						attribute<Geometries/WebMercator_base>  Point   := Union_Data(., ../FirstPoint, ../LastPoint);
-						attribute<..>							SeqNr   := value(id(.) % nrofrows(..), ..);
-						attribute<uint32>                      	Ordinal := id(.) / nrofrows(..);
+						attribute<WebMercator>  Point   := Union_Data(., ../FirstPoint, ../LastPoint);
+						attribute<..>           SeqNr   := value(id(.) % nrofrows(..), ..);
+						attribute<uint32>       Ordinal := id(.) / nrofrows(..);
 					}
 				}
 				
@@ -488,7 +491,7 @@ container Templates: Using = "Units;Classifications;geometries"
 					
 					//For visualisation
 					unit<uint32> PointSet := union_unit(.,.);
-					attribute<Geometries/WebMercator_base> geometry (arc) := points2sequence(Union_Data(PointSet, NodeSet/geometry[F1], NodeSet/geometry[F2]), value(id(PointSet) %#IntermediateLinkSet, IntermediateLinkSet));
+					attribute<WebMercator> geometry (arc) := points2sequence(Union_Data(PointSet, NodeSet/geometry[F1], NodeSet/geometry[F2]), value(id(PointSet) %#IntermediateLinkSet, IntermediateLinkSet));
 				}
 			}
 		}
@@ -513,50 +516,52 @@ container Templates: Using = "Units;Classifications;geometries"
 
 		unit<uint32> NodesNotConnected := select_with_org_rel(!Networks/IsConnected)
 		{
-			attribute<Geometries/WebMercator_base>        geometry := org_rel -> geometry;
+			attribute<WebMercator>        geometry := org_rel -> geometry;
 		}
 	}
+	
 	Template Check_Connectiveness_T_seldomain
 	{
-		unit<uint32> LinkSet_domain;
-		unit<uint32> NodeSet_domain;
-		attribute<NodeSet_domain> F1(LinkSet_domain);
-		attribute<NodeSet_domain> F2(LinkSet_domain);
-		unit<uint32> 		seldomain;
-		attribute<WGS84>	seldomain_geom (poly, seldomain);
-		
-		attribute<seldomain> seldomain_rel 	(NodeSet_domain):= point_in_polygon(NodeSet_domain/geometry_LL, seldomain_geom);
-		attribute<upoint>	 nps_comb 		(NodeSet_domain):= point(Networks/PartNr, seldomain_rel);
-		attribute<Networks_per_seldomain> nps_rel (NodeSet_domain):= rlookup(nps_comb, Networks_per_seldomain/Values);
-		
-		unit<uint32> Networks_per_seldomain:= unique(nps_comb) {
-			attribute<Networks>	Network_rel:= pointrow(values)[Networks];
-			attribute<seldomain>Seldomain_rel:= pointcol(values)[seldomain];
-			attribute<uint32> Nr_nodes_in_both:= pcount(nps_rel);
-			attribute<uint32> Nr_nodes_in_network:= Nr_nodes_in_both > 0 ? Networks/Nr_Nodes[Network_rel] : 0 / 0;
-			attribute<bool>	  Main_in_seldomain:= 		id(.) = max_index(Nr_nodes_in_both, Seldomain_rel)[seldomain_rel];
-			attribute<bool>	  Main_touching_seldomain:= id(.) = max_index(Nr_nodes_in_network, Seldomain_rel)[seldomain_rel];
-			attribute<bool>   Sel_crit:= Nr_nodes_in_both > 1000 || Main_touching_seldomain;
-		}
+		unit<uint32>              LinkSet_domain;
+		unit<uint32>              NodeSet_domain;
+		attribute<NodeSet_domain> F1 (LinkSet_domain);
+		attribute<NodeSet_domain> F2 (LinkSet_domain);
+		unit<uint32>              seldomain;
+		attribute<WGS84>          seldomain_geom (poly, seldomain);
 		///
 		
-		unit<uint32> Networks:= connected_parts(F1, F2) // Verzameling van alle netwerken, inclusief de subnetwerken.
+		attribute<seldomain>              seldomain_rel  (NodeSet_domain) := point_in_polygon(NodeSet_domain/geometry_LL, seldomain_geom);
+		attribute<upoint>                 nps_comb       (NodeSet_domain) := point(Networks/PartNr, seldomain_rel);
+		attribute<Networks_per_seldomain> nps_rel        (NodeSet_domain) := rlookup(nps_comb, Networks_per_seldomain/Values);
+		
+		unit<uint32> Networks_per_seldomain := unique(nps_comb) 
 		{
-			attribute<uint32>   Nr_Nodes   := pcount(PartNr);
-			attribute<uint32> 	Nr_Seldomains:= pcount(Networks_per_seldomain/Network_rel);
-			parameter<Networks> Main       := max_index(Nr_Nodes); // uitgangspunt: het netwerk met de meeste nodes is het relevante netwerk
-			attribute<Networks> Main_in_seldomain (seldomain) := Networks_per_seldomain/Network_rel[max_index(Networks_per_seldomain/Nr_nodes_in_network, Networks_per_seldomain/Seldomain_rel)]; // uitgangspunt: neem het grootste netwerk met minstens een punt binnen de grenzen van een unit.
-			attribute<bool>		SelCrit:= any(Networks_per_seldomain/Sel_crit, Networks_per_seldomain/Network_rel);
-			attribute<uint32>	Nr_Nodes_Main_in_seldomain (seldomain):= Nr_Nodes[Main_in_seldomain];
-			attribute<bool>     IsConnected (NodeSet_domain) := PartNr == Main;
-			attribute<bool> 	IsConnected_seldomain (NodeSet_domain) := IsDefined(rlookup(PartNr, Main_in_seldomain));
+			attribute<Networks>	 Network_rel             := pointrow(values)[Networks];
+			attribute<seldomain> Seldomain_rel           := pointcol(values)[seldomain];
+			attribute<uint32>    Nr_nodes_in_both        := pcount(nps_rel);
+			attribute<uint32>    Nr_nodes_in_network     := Nr_nodes_in_both > 0 ? Networks/Nr_Nodes[Network_rel] : 0 / 0;
+			attribute<bool>	     Main_in_seldomain       := id(.) = max_index(Nr_nodes_in_both, Seldomain_rel)[seldomain_rel];
+			attribute<bool>	     Main_touching_seldomain := id(.) = max_index(Nr_nodes_in_network, Seldomain_rel)[seldomain_rel];
+			attribute<bool>      Sel_crit                := Nr_nodes_in_both > 1000 || Main_touching_seldomain;
 		}
 		
-		attribute<bool> 	IsVerbonden_single (LinkSet_domain) := Networks/IsConnected[F1] && Networks/IsConnected[F2];
-		attribute<bool> 	IsVerbonden_seldomain (LinkSet_domain) := Networks/IsConnected_seldomain[F1] || Networks/IsConnected_seldomain[F2];
-		attribute<bool> 	IsVerbonden (LinkSet_domain) := Networks/SelCrit[Networks/PartNr[F1]];
+		unit<uint32> Networks := connected_parts(F1, F2) // Verzameling van alle netwerken, inclusief de subnetwerken.
+		{
+			attribute<uint32>   Nr_Nodes                                    := pcount(PartNr);
+			attribute<uint32>   Nr_Seldomains                               := pcount(Networks_per_seldomain/Network_rel);
+			parameter<Networks> Main                                        := max_index(Nr_Nodes); // uitgangspunt: het netwerk met de meeste nodes is het relevante netwerk
+			attribute<Networks> Main_in_seldomain               (seldomain) := Networks_per_seldomain/Network_rel[max_index(Networks_per_seldomain/Nr_nodes_in_network, Networks_per_seldomain/Seldomain_rel)]; // uitgangspunt: neem het grootste netwerk met minstens een punt binnen de grenzen van een unit.
+			attribute<bool>     SelCrit                                     := any(Networks_per_seldomain/Sel_crit, Networks_per_seldomain/Network_rel);
+			attribute<uint32>   Nr_Nodes_Main_in_seldomain      (seldomain) := Nr_Nodes[Main_in_seldomain];
+			attribute<bool>     IsConnected                (NodeSet_domain) := PartNr == Main;
+			attribute<bool>     IsConnected_seldomain      (NodeSet_domain) := IsDefined(rlookup(PartNr, Main_in_seldomain));
+		}
 		
-		attribute<uint32>	NrParts (LinkSet_domain):= Networks/Nr_Nodes[Networks/PartNr[F1]];
+		attribute<bool>    IsVerbonden_single    (LinkSet_domain) := Networks/IsConnected[F1] && Networks/IsConnected[F2];
+		attribute<bool>    IsVerbonden_seldomain (LinkSet_domain) := Networks/IsConnected_seldomain[F1] || Networks/IsConnected_seldomain[F2];
+		attribute<bool>    IsVerbonden           (LinkSet_domain) := Networks/SelCrit[Networks/PartNr[F1]];
+		 
+		attribute<uint32>  NrParts               (LinkSet_domain) := Networks/Nr_Nodes[Networks/PartNr[F1]];
 
 		unit<uint32> NodesNotConnected := select_with_org_rel(!Networks/IsConnected)
 		{
@@ -565,10 +570,10 @@ container Templates: Using = "Units;Classifications;geometries"
 	}
 	Template Check_Connectiveness_T_adhoc
 	{
-		unit<uint32> LinkSet_domain;
-		unit<uint32> NodeSet_domain;
-		attribute<NodeSet_domain> F1(LinkSet_domain);
-		attribute<NodeSet_domain> F2(LinkSet_domain);
+		unit<uint32>              LinkSet_domain;
+		unit<uint32>              NodeSet_domain;
+		attribute<NodeSet_domain> F1 (LinkSet_domain);
+		attribute<NodeSet_domain> F2 (LinkSet_domain);
 		///
 		
 		attribute<bool>                      IsVerbonden  (LinkSet_domain) := Networks/IsConnected[F1] && Networks/IsConnected[F2];

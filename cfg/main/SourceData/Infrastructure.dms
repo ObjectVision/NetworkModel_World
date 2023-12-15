@@ -2,9 +2,9 @@ container Infrastructure : using = "geometries;units"
 {  
 	container OSM
 	{	
-		parameter<string> file_date := '20231109';
-		parameter<string> dir       := '%NetworkModelWorld_DataDir%/Infrastructure/OSM/'+file_date;
-		parameter<string> date      := 'latest';
+		parameter<string> file_date := ModelParameters/OSM_file_date;
+		parameter<string> dir       := ModelParameters/OSM_dir;
+		parameter<string> date      := ModelParameters/OSM_dir_date;
 		unit<uint32>      Regios    := ModelParameters/Advanced/OSM_Regios;
 	
 		container Per_OSM_Continent :=
@@ -13,9 +13,7 @@ container Infrastructure : using = "geometries;units"
 				, 'Per_Continent_T('+quote(Regios/label)+')'
 			)
 		{
-			parameter<string> Generate_all        := 'Ready', ExplicitSuppliers = "Generate_Lines;Generate_MultiLines";
-			parameter<string> Generate_Lines      := 'Ready', ExplicitSuppliers = "=AsList(Regios/name+'/Generate_Lines_FSS', ';')";
-			parameter<string> Generate_MultiLines := 'Ready', ExplicitSuppliers = "=AsList(Regios/name+'/Generate_MultiLines_FSS', ';')";
+			parameter<string> Generate_all      := 'Ready', ExplicitSuppliers = "=AsList(Regios/name+'/Generate_Lines_FSS', ';')";
 		}
 		
 		container Per_Continent 
@@ -36,7 +34,6 @@ container Infrastructure : using = "geometries;units"
 				attribute<km_hr>                        KPH            := union_data(., Per_OSM_Continent/North_America/Roads/KPH,Per_OSM_Continent/Central_America/Roads/KPH);
 			}
 			unit<uint32> South_America     := Per_OSM_Continent/South_America/Roads;
-			
 		}
 		
 		
@@ -48,7 +45,6 @@ container Infrastructure : using = "geometries;units"
 			
 			
 			parameter<string> Generate_Lines_FSS      := 'Lines', ExplicitSuppliers = "Make_lines_fss";
-			parameter<string> Generate_MultiLines_FSS := 'Multilines', ExplicitSuppliers = "Make_multilines_fss";
 			
 			container Read_Roads_pbf
 			:	StorageName     = "= dir + '/'+Regio+'-'+date+'.osm.pbf'" 
@@ -57,11 +53,6 @@ container Infrastructure : using = "geometries;units"
 			, 	SyncMode        = "None"
 			, 	DialogData      = "wgs84"
 			{
-				unit<uint32> multilinestrings : sqlstring = "SELECT * FROM multilinestrings"
-				{
-					attribute<wgs84>                        geometry (arc);
-					attribute<string>                       other_tags;
-				}
 				unit<uint32> lines : sqlstring = "SELECT * FROM lines"
 				{
 					attribute<wgs84>                        geometry (arc);
@@ -69,13 +60,6 @@ container Infrastructure : using = "geometries;units"
 					attribute<string>                       other_tags;
 					attribute<int32>                        z_order;
 				}
-			}
-			
-			unit<uint32> Make_multilines_fss := Read_Roads_pbf/multilinestrings
-			,   StorageName = "='%LocalDataProjDir%/RegionFiles/'+file_date+'_'+Regio+'_multilinestrings.fss'"
-			{
-				attribute<wgs84>                        geometry (arc) := Read_Roads_pbf/multilinestrings/geometry;
-				attribute<string>                       other_tags     := Read_Roads_pbf/multilinestrings/other_tags;
 			}
 			
 			unit<uint32> Make_lines_fss := Read_Roads_pbf/lines
@@ -86,23 +70,6 @@ container Infrastructure : using = "geometries;units"
 				attribute<string>                       other_tags     := Read_Roads_pbf/lines/other_tags;
 				attribute<int32>                        z_order        := Read_Roads_pbf/lines/z_order;
 			}
-			
-			// unit<uint32> Read_multilines_fss 
-			// :   StorageName = "='%LocalDataProjDir%/RegionFiles/'+file_date+'_'+Regio+'_multilinestrings.fss'"
-			// ,	StorageReadOnly = "True"
-			// {
-				// attribute<wgs84>                        geometry (arc);
-				// attribute<string>                       other_tags;
-				// attribute<bool>                         IsFerry           := strcount(other_tags, '"route"=>"ferry"') > 0;
-				// attribute<bool>                         IsCarFerry        := strcount(other_tags, '"route"=>"ferry"') > 0 && strcount(other_tags, '"motor_vehicle"=>"yes"') > 0;
-
-				// attribute<classifications/OSM/roadtype> roadtype_rel       := IsCarFerry ? classifications/OSM/roadtype/v/ferry : null_b[classifications/OSM/roadtype];
-				
-				// attribute<bool>                           IsOneDirection     := const(FALSE, .);
-				// attribute<int32>                          z_order            := const(null_i, .);
-				// attribute<bool>                           IsPartOfCarNetwork := IsCarFerry;
-				// attribute<km_hr>                          KPH                := IsCarFerry ? ModelParameters/Advanced/Ferry_Speed : null_f[km_hr];
-			// }
 			
 			unit<uint32> Read_lines_fss 
 			:   StorageName = "='%LocalDataProjDir%/RegionFiles/'+file_date+'_'+Regio+'.fss'"
@@ -142,17 +109,6 @@ container Infrastructure : using = "geometries;units"
 				attribute<km_hr>                           KPH_from_source        := value(MaxSpeeds/speed, km_hr)[KPH_from_source_rel];
 				attribute<km_hr>                           KPH                    := MakeDefined(KPH_from_source, Classifications/OSM/roadtype/CarSpeedOutside[roadtype_rel]);
 			}
-			
-			// unit<uint32> Roads_src := union_unit(Read_lines_fss, Read_multilines_fss)
-			// {
-				// attribute<wgs84>                          geometry (arc)     := union_data(., Read_lines_fss/geometry, Read_multilines_fss/geometry);
-				// attribute<bool>                           IsOneDirection     := union_data(., Read_lines_fss/IsOneDirection, Read_multilines_fss/IsOneDirection);
-				// attribute<int32>                          z_order            := union_data(., Read_lines_fss/z_order, Read_multilines_fss/z_order);
-				// attribute<classifications/OSM/roadtype>   roadtype_rel       := union_data(., Read_lines_fss/roadtype_rel, Read_multilines_fss/roadtype_rel);
-				// attribute<bool>                           IsPartOfCarNetwork := union_data(., Read_lines_fss/IsPartOfCarNetwork, Read_multilines_fss/IsPartOfCarNetwork);
-				// attribute<bool>                           IsCarFerry         := union_data(., Read_lines_fss/IsCarFerry, Read_multilines_fss/IsCarFerry);
-				// attribute<km_hr>                          KPH                := union_data(., Read_lines_fss/KPH, Read_multilines_fss/KPH);
-			// }
 			
 			unit<uint32> Roads := select_with_attr_by_cond(Read_lines_fss, Read_lines_fss/IsPartOfCarNetwork || Read_lines_fss/IsCarFerry)
 			{

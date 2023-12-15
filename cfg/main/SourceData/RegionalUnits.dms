@@ -4,9 +4,10 @@ container RegionalUnits : using = "geometries"
 	: storagename = "= propvalue(store_Countries, 'StorageName')"
 	, StorageReadOnly = "True"
 	{
-		attribute<string>           LabelText; 
+		attribute<string>           Label; 
 		attribute<string>           ZoneId; 
 		attribute<wgs84>            geometry (poly); 
+		attribute<WebMercator>      Geometry_WM (poly); 
 		attribute<WorldMollweide>   Geometry_MW (poly); 
 		attribute<Continents>       Continents_rel; 
 	}
@@ -14,14 +15,15 @@ container RegionalUnits : using = "geometries"
 	unit<uint32> store_Countries := unique(Local_Units/Country)
 	, storagename = "%NetworkModelWorld_DataDir%/Regions/fss/Countries.fss"
 	{
-		attribute<string>           LabelText          := Values;
+		attribute<string>           Label              := Values;
 		attribute<string> 			ZoneId			   := first(Local_Units/GID_0, Local_Units/store_countries_rel);
 		attribute<wgs84>            geometry    (poly) := partitioned_union_polygon(Local_Units/geometry[BaseProjection_ip], Local_Units/store_countries_rel)[wgs84];
-		attribute<WorldMollweide>   Geometry_MW (poly) := convert(Convert_wgs84_mollweide/geometry_yx, WorldMollweide);
+		attribute<WorldMollweide>   Geometry_MW (poly) := convert(Convert_wgs84_xy_to_yx/geometry_yx, WorldMollweide);
+		attribute<WebMercator>      Geometry_WM (poly) := convert(Convert_wgs84_xy_to_yx/geometry_yx, WebMercator);
 		attribute<Continents>       Continents_rel     := first(Local_Units/Continents_rel, Local_Units/store_countries_rel);
 		
 		// convert wgs84 geometry to mollweide geometry
-		container Convert_wgs84_mollweide
+		container Convert_wgs84_xy_to_yx : DisableStorage = "true"
 		{
 			unit<uint32> border_points := sequence2points(geometry)
 			{

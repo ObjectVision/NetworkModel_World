@@ -1,4 +1,4 @@
-container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceData/RegionalUnits;" 
+container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceData/RegionalUnits" 
 {  
 	
 	unit<uint32> thresholds: nrofrows= 25 {
@@ -47,13 +47,13 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			//attribute<RelevantSettlements> rs_id:				expr = "point_in_polygon(Geometry, RelevantSettlements/Geometry)";
 		}
 		
-		attribute<Geometries/WebMercator_base> inGrids_centroid_wm (inGrids):= convert(point(PointCol(inGrids/centroid), PointRow(inGrids/centroid))[BaseProjection], Geometries/WebMercator_base);
+		attribute<Geometries/WebMercator> inGrids_centroid_wm (inGrids):= convert(point(PointCol(inGrids/centroid), PointRow(inGrids/centroid))[BaseProjection], Geometries/WebMercator);
 		attribute<FinalNodeSet> Closest_node (inGrids):= connect(FinalNodeSet/geometry, inGrids_centroid_wm);
 		attribute<bool>			Close_enough (inGrids):= dist(inGrids_centroid_wm, FinalNodeSet/geometry[Closest_node]) < 100d;
 		attribute<FinalNodeSet> Dest_NodeId (inGrids):= Close_enough ? Closest_node : const(0 / 0, inGrids, FinalNodeSet);
 		
 		unit<uint32> Unconnected_Grids:= subset(IsNull(Dest_NodeId)) {
-			attribute<Geometries/WebMercator_base> Geometry:= inGrids_centroid_wm[Nr_OrgEntity];
+			attribute<Geometries/WebMercator> Geometry:= inGrids_centroid_wm[Nr_OrgEntity];
 			attribute<BaseProjection>	geometry_LL:= inGrids/centroid[Nr_OrgEntity];
 			attribute<inCountries> 	Country_rel:= inGrids/Country_rel[Nr_OrgEntity];
 			attribute<in_sep_units> Sep_unit_rel:= inGrids/sepunit_rel[Nr_OrgEntity];
@@ -61,7 +61,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		}
 		
 		unit<uint32> Connected_Grids:= subset(IsDefined(Dest_NodeId)) {
-			attribute<Geometries/WebMercator_base> Geometry:= inGrids_centroid_wm[Nr_OrgEntity];
+			attribute<Geometries/WebMercator> Geometry:= inGrids_centroid_wm[Nr_OrgEntity];
 			attribute<BaseProjection>	geometry_LL:= inGrids/centroid[Nr_OrgEntity];
 			attribute<FinalNodeSet> NodeId:= Dest_NodeId[Nr_OrgEntity];
 			attribute<float32>		Pop:= inGrids/population[Nr_OrgEntity];
@@ -86,7 +86,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				attribute<FinalNodeSet> NodeId:= SelectedSettlements/NodeId[Nr_OrgEntity];
 			}
 			unit<uint32> Country_Unconnected_Grids:= subset(Unconnected_Grids/country_rel = inCountry) {
-				attribute<Geometries/WebMercator_base> Geometry:= 	Unconnected_Grids/Geometry[Nr_OrgEntity];
+				attribute<Geometries/WebMercator> Geometry:= 	Unconnected_Grids/Geometry[Nr_OrgEntity];
 				attribute<Geometries/WorldMollweide> Geometry_mw:= (Unconnected_Grids/Geometry[Nr_OrgEntity])[Geometries/WorldMollweide];
 				attribute<BaseProjection>			 geometry_LL:= 	Unconnected_Grids/geometry_LL[Nr_OrgEntity];
 				attribute<sep_Country_Units> 		 scu_rel:= 		rlookup(Unconnected_Grids/sep_unit_rel[Nr_OrgEntity], sep_Country_Units/Nr_OrgEntity);
@@ -95,7 +95,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				//attribute<Country_Connected_Grids> 
 			}
 			unit<uint32> Country_Connected_Grids:= subset(Connected_Grids/country_rel = inCountry) {
-				attribute<Geometries/WebMercator_base> Geometry:= Connected_Grids/Geometry[Nr_OrgEntity];
+				attribute<Geometries/WebMercator> Geometry:= Connected_Grids/Geometry[Nr_OrgEntity];
 				attribute<Geometries/WorldMollweide> Geometry_mw:= (Connected_Grids/Geometry[Nr_OrgEntity])[Geometries/WorldMollweide];
 				attribute<BaseProjection>			 geometry_LL:= Connected_Grids/geometry_LL[Nr_OrgEntity];
 				attribute<sep_Country_Units> 		 scu_rel:= 		rlookup(Connected_Grids/sep_unit_rel[Nr_OrgEntity], sep_Country_Units/Nr_OrgEntity);
@@ -254,7 +254,6 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			*/
 		}
 	}
-	
 	Template Settlement_Hierarchy_T
 	{
 		parameter<string> Continent_name;
@@ -266,19 +265,23 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		unit<uint32> FinalLinkSet := NetwerkSpec/FinalLinkSet_Read;
 		unit<uint32> FinalNodeSet := NetwerkSpec/FinalNodeSet_Read;
 		
-		attribute<Geometries/WebMercator_base> Org_centroid_wm (Org):= convert(point(PointCol(Org/centroid), PointRow(Org/centroid))[BaseProjection], Geometries/WebMercator_base);
-		attribute<FinalNodeSet> Closest_node (Org):= connect(FinalNodeSet/geometry, Org_centroid_wm);
-		attribute<bool>			Close_enough (Org):= dist(Org_centroid_wm, FinalNodeSet/geometry[Closest_node]) < 100d;
-		attribute<FinalNodeSet> Org_NodeId (Org):= Close_enough ? Closest_node : const(0 / 0, Org, FinalNodeSet);
+		attribute<WebMercator>  Org_centroid_wm (Org) := convert(point(PointCol(Org/centroid), PointRow(Org/centroid))[BaseProjection], WebMercator);
+		attribute<FinalNodeSet> Closest_node    (Org) := connect(FinalNodeSet/geometry, Org_centroid_wm);
+		attribute<bool>         Close_enough    (Org) := dist(Org_centroid_wm, FinalNodeSet/geometry[Closest_node]) < 100d;
+		attribute<FinalNodeSet> Org_NodeId      (Org) := Close_enough ? Closest_node : const(0 / 0, Org, FinalNodeSet);
 		
-		unit<uint32> Unconnected_Settlements:= subset(IsNull(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" {attribute<BaseProjection> centroid:= Org/centroid[Nr_OrgEntity];}
+		unit<uint32> Unconnected_Settlements:= select_with_org_rel(IsNull(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" 
+		{
+			attribute<BaseProjection> centroid := Org/centroid[org_rel];
+		}
 		
-		unit<uint32> Connected_Settlements:= subset(IsDefined(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" {
-			attribute<BaseProjection> centroid:= Org/centroid[Nr_OrgEntity];
-			attribute<FinalNodeSet> NodeId:= Org_NodeId[Nr_OrgEntity];
-			attribute<float32> population:= Org/population[Nr_OrgEntity];
-			attribute<Countries> Country_rel:= Org/Country_rel[Nr_OrgEntity];
-			attribute<string>	LabelText:= Org/LabelText[Nr_OrgEntity];
+		unit<uint32> Connected_Settlements := select_with_org_rel(IsDefined(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" 
+		{
+			attribute<BaseProjection>  centroid    := Org/centroid[org_rel];
+			attribute<FinalNodeSet>    NodeId      := Org_NodeId[org_rel];
+			attribute<float32>         population  := Org/population[org_rel];
+			attribute<Countries>       Country_rel := Org/Country_rel[org_rel];
+			attribute<string>		   LabelText   := Org/Label[org_rel];
 		}
 		
 		unit<uint64> OD_matrix :=
@@ -291,25 +294,36 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				, Connected_Settlements/NodeId 
 				, Connected_Settlements/NodeId 
 				, convert(max(thresholds/num), s_f) //cut impedance
-			) {
-				attribute<float32> pop_i:= Connected_Settlements/population[OrgZone_rel];
-				attribute<float32> pop_j:= Connected_Settlements/population[DstZone_rel];
-			}
+			) 
+		{
+			attribute<float32> pop_i:= Connected_Settlements/population[OrgZone_rel];
+			attribute<float32> pop_j:= Connected_Settlements/population[DstZone_rel];
+		}
 			
-			parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Hierarchy/'+Continent_Name;
-			
-			container biggest_centre:= for_each_nedva(thresholds/name,  	'uint32(id(Connected_Settlements) = OD_matrix/DstZone_rel[max_index(OD_matrix/pop_j * float32(float32(OD_matrix/impedance) <= '+thresholds/ns+'), OD_matrix/OrgZone_rel)])', Connected_Settlements, uint32, filepath+'.dbf');
-			
-			unit<uint32> Hierarchies_write:= Connected_Settlements, storagename = "= filepath+'_point.dbf'" {
-				attribute<BaseProjection> poly (poly):= Org/Geometry_LL[Nr_OrgEntity], storagename = "= filepath+'_poly.shp'";
-				attribute<BaseProjection> point:= Org/centroid[Nr_OrgEntity], storagename = "= filepath+'_point.shp'";
-				attribute<string>	LabelText:= Connected_Settlements/LabelText;
-				attribute<uint32> 	CountryId:= Country_rel;
-				attribute<string> 	Country:= Countries/LabelText[Country_rel];
-				attribute<float32>	Pop:= population;
-				attribute<uint32> 	Maxl:= = 'max_elem('+AsItemList('(biggest_centre/'+thresholds/name+' * uint32('+string(thresholds/num)+'))')+')';
-				
-			}
+		parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Hierarchy/'+Continent_Name;
+		
+		container biggest_centre:= 
+			for_each_nedva(
+				thresholds/name
+				, 'uint32(id(Connected_Settlements) = OD_matrix/DstZone_rel[max_index(OD_matrix/pop_j * float32(float32(OD_matrix/impedance) <= '+thresholds/ns+'), OD_matrix/OrgZone_rel)])'
+				, Connected_Settlements
+				, uint32
+				, filepath+'.dbf'
+			);
+		
+		parameter<bool> Store_Hierarchies  := TRUE, ExplicitSuppliers = "Hierarchies_write";
+		
+		unit<uint32> Hierarchies_write := Connected_Settlements
+		, storagename = "= filepath+'.dbf'" 
+		{
+			attribute<BaseProjection> poly (poly) := Org/Geometry_LL[org_rel], storagename = "= filepath+'.shp'";
+			attribute<BaseProjection> point       := Org/centroid[org_rel], storagename = "= filepath+'_point.shp'";
+			attribute<string>         Label       := Org/Label[org_rel];
+			attribute<uint32>         CountryId   := Country_rel;
+			attribute<string>         Country     := Countries/Label[Country_rel];
+			attribute<float32>        Pop         := population;
+			attribute<uint32>         Maxl        := = 'max_elem('+AsItemList('(biggest_centre/'+thresholds/name+' * uint32('+string(thresholds/num)+'))')+')';
+		}
 			
 			unit<uint32> Hierarchies_ReadOnly: storagename = "= propvalue(Hierarchies_write/point, 'StorageName')", StorageReadOnly = "true", storagetype = "gdal.vect", dialogdata = "Geometry", DialogType = "map" {
 				attribute<BaseProjection> Geometry;
