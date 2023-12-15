@@ -13,8 +13,10 @@ container SourceData: Using = "Units;Classifications;geometries"
 			attribute<WGS84>          geometry_LL (poly) := union_data(., villages/geometry_LL, semidensetowns/geometry_LL, towns/geometry_LL, cities/geometry_LL);
 			attribute<int32>          ID                 := union_data(., villages/ID, semidensetowns/ID, towns/ID, cities/ID);
 			attribute<WGS84>          centroid           := union_data(., villages/centroid, semidensetowns/centroid, towns/centroid, cities/centroid);
+			attribute<Countries>	  country_rel		 := point_in_polygon(centroid, Countries/Geometry);
 			attribute<Continents>     continent_rel      := union_data(., villages/continent_rel, semidensetowns/continent_rel, towns/continent_rel, cities/continent_rel);
 			attribute<float32>     	  population 	     := float32(union_data(., villages/POP_2020, semidensetowns/POP_2020, towns/POP_2020, cities/POP_2020));
+			attribute<string>		  LabelText			 := MakeDefined(Countries/LabelText[country_rel],'None')+'_'+union_data(.,const('vill',villages,string),const('sdt',semidensetowns,string),const('town',towns,string),const('city',cities,string))+'_'+string(ID);
 		}
 		
 		
