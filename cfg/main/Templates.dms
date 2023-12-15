@@ -282,8 +282,9 @@ container Templates: Using = "Units;Classifications;geometries"
 				{
 					attribute<bool>                            IsPartOfJunctionFreeSection    := NodeSet/WillBeDeleted[F1] || NodeSet/WillBeDeleted[F2];
 					attribute<bool>                            IsInsideJunctionFreeSection    := NodeSet/WillBeDeleted[F1] && NodeSet/WillBeDeleted[F2];
+					attribute<bool>							   JFS_unavailable				  := (NodeSet/JFS_unavailable[F1] || NodeSet/JFS_unavailable[F2]) && IsPartOfJunctionFreeSection;
 					attribute<bool>                            IsOnBorderOfJunctionFreeSection:= IsPartOfJunctionFreeSection && !IsInsideJunctionFreeSection;
-					attribute<bool>                            IsFinalLink                    := !IsPartOfJunctionFreeSection;
+					attribute<bool>                            IsFinalLink                    := !IsPartOfJunctionFreeSection || JFS_unavailable;
 					attribute<bool>                            IsOneDirection                 := PrevIntermediateLinkSet/IsOneDirection;
 					
 					// For visualisation
@@ -301,7 +302,9 @@ container Templates: Using = "Units;Classifications;geometries"
 																									|| pcount(UniqueLocations/Node_rel_of_link_to_network) != 0; //if there are nodes related to the network to the OD-point, then it is the cnnecting node
 
 					//Forward relations
+					attribute<JunctionFreeSection_Check>       JunctionFreeSection_Check_rel  := ConnectedParts/JunctionFreeSection_Check_rel[ConnectedParts_rel];
 					attribute<JunctionFreeSection>             JunctionFreeSection_rel        := ConnectedParts/JunctionFreeSection_rel[ConnectedParts_rel];
+					attribute<bool>							   JFS_unavailable				  := ConnectedParts/JFS_unavailable[ConnectedParts_rel];
 					attribute<ConnectedParts>                  ConnectedParts_rel             := ConnectedParts/PartNr;
 					
 					//attribute<bool>                            IsOrgDest_location             := IsDefined(rlookup(values, UniqueLocations/Values));
@@ -330,7 +333,9 @@ container Templates: Using = "Units;Classifications;geometries"
 				{
 					attribute<NodeSet>                         FirstNode_rel                   := invert(PartNr);
 					attribute<bool>                            IsJunctionFreeSection           := NodeSet/WillBeDeleted[FirstNode_rel];
-					attribute<JunctionFreeSection>             JunctionFreeSection_rel         := recollect_by_cond(ConnectedParts/IsJunctionFreeSection, ID(JunctionFreeSection));
+					attribute<JunctionFreeSection_Check>       JunctionFreeSection_Check_rel   := recollect_by_cond(ConnectedParts/IsJunctionFreeSection, ID(JunctionFreeSection_Check));
+					attribute<JunctionFreeSection>       	   JunctionFreeSection_rel   	   := JunctionFreeSection_Check/JFS_rel[JunctionFreeSection_Check_rel];
+					attribute<bool>						       JFS_unavailable		   		   := IsDefined(JunctionFreeSection_Check_rel) && IsNull(JunctionFreeSection_rel);
 				}
 				
 				unit<uint32> ConnectorLink := select_with_org_rel(LinkSet/IsOnBorderOfJunctionFreeSection)
@@ -341,7 +346,8 @@ container Templates: Using = "Units;Classifications;geometries"
 					attribute<bool>                            is_F1_deleted                  := NodeSet/WillBeDeleted[F1];
 					attribute<NodeSet>                         F_keep                         := is_F1_deleted ? F2 : F1; // Unchanged Node
 					attribute<NodeSet>                         F_delete                       := is_F1_deleted ? F1 : F2; // Node in JunctionFreeSection
-					attribute<JunctionFreeSection>             JunctionFreeSection_rel        := NodeSet/JunctionFreeSection_rel[F_delete];
+					attribute<JunctionFreeSection_Check>       JunctionFreeSection_Check_rel  := NodeSet/JunctionFreeSection_Check_rel[F_delete];
+					attribute<JunctionFreeSection>			   JunctionFreeSection_rel		  := JunctionFreeSection_Check/JFS_rel[JunctionFreeSection_Check_rel];
 					attribute<NodeSet>                         NodeSet_rel                    := F_keep;
 					attribute<s_f>                             Impedance                      := LinkSet/Impedance[org_rel];
 					attribute<km>                              LengthKm                       := LinkSet/LengthKm[org_rel];
@@ -351,10 +357,16 @@ container Templates: Using = "Units;Classifications;geometries"
 					attribute<Geometries/WebMercator_base>               geometry  (arc)                := LinkSet/geometry[org_rel];
 				}
 				
+				// first test for empty junctionfreesections (reason unknown)
+				unit<uint32> JunctionFreeSection_Check:= select(ConnectedParts/IsJunctionFreeSection) {
+					attribute<uint32>						   Connector_count 	 			  := pcount(ConnectorLink/JunctionFreeSection_Check_rel);
+					attribute<JunctionFreeSection> 			   JFS_rel						  := invert(JunctionFreeSection/Nr_OrgEntity);
+				}
 				
-				unit<uint32> JunctionFreeSection := select(ConnectedParts/IsJunctionFreeSection)
+				unit<uint32> JunctionFreeSection := subset(JunctionFreeSection_Check/Connector_count > 0)
 				, Descr = "Those nodes that are redundant, because there are no junctions on the links"
 				{
+					
 					attribute<ConnectorLink>                   First_ConnectorLink_rel        := min(id(ConnectorLink), ConnectorLink/JunctionFreeSection_rel); //todo sneller
 					attribute<ConnectorLink>                   Last_ConnectorLink_rel         := max(id(ConnectorLink), ConnectorLink/JunctionFreeSection_rel); //todo sneller
 					attribute<bool>                            IsDisconnected                 := First_ConnectorLink_rel > Last_ConnectorLink_rel;

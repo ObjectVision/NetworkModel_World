@@ -9,9 +9,10 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		')') {
 			
 			unit<uint32> thresholds: nrofrows= 25 {
-				attribute<float32> num: expr = "float32(id(.)) * 5f";
-				attribute<string>  padnum: expr = "num < 10f ? '0' + string(num) : string(num)";
-				attribute<string>  ns:	 expr = "string(num)+'f'";
+				attribute<min_f>   num: expr = "(float32(id(.)) * 5f)[min_f]";
+				attribute<s_f> 	   num_s_f: expr = "convert(num, s_f)";
+				attribute<string>  padnum: expr = "num < 10[min_f] ? '0' + string(num) : string(num)";
+				attribute<string>  ns:	 expr = "string(num_s_f)+'f'";
 				attribute<string>  name: expr = "'L_'+padnum+'min'";
 			}
 		}
@@ -29,8 +30,8 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		unit<uint32> FinalNodeSet := NetwerkSpec/FinalNodeSet_Read;
 		
 		attribute<Geometries/WebMercator_base> Org_centroid_wm (Org):= convert(point(PointCol(Org/centroid), PointRow(Org/centroid))[BaseProjection], Geometries/WebMercator_base);
-		attribute<FinalNodeSet> Closest_node (Org):= connect(FinalNodeSet/geometry_wm, Org_centroid_wm);
-		attribute<bool>			Close_enough (Org):= dist(Org_centroid_wm, FinalNodeSet/geometry_wm[Closest_node]) < 100d;
+		attribute<FinalNodeSet> Closest_node (Org):= connect(FinalNodeSet/geometry, Org_centroid_wm);
+		attribute<bool>			Close_enough (Org):= dist(Org_centroid_wm, FinalNodeSet/geometry[Closest_node]) < 100d;
 		attribute<FinalNodeSet> Org_NodeId (Org):= Close_enough ? Closest_node : const(0 / 0, Org, FinalNodeSet);
 		
 		unit<uint32> Unconnected_Settlements:= subset(IsNull(Org_NodeId)), dialogdata = "centroid", dialogtype = "map" {attribute<BaseProjection> centroid:= Org/centroid[Nr_OrgEntity];}
@@ -63,6 +64,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			
 			unit<uint32> Hierarchies_write:= Connected_Settlements, storagename = "= filepath+'.dbf'" {
 				attribute<BaseProjection> poly (poly):= Org/Geometry_LL[Nr_OrgEntity], storagename = "= filepath+'.shp'";
+				attribute<BaseProjection> point:= Org/centroid[Nr_OrgEntity], storagename = "= filepath+'_point.shp'";
 				attribute<string>	LabelText:= Org/LabelText[Nr_OrgEntity];
 				attribute<uint32> 	CountryId:= Country_rel;
 				attribute<string> 	Country:= Countries/LabelText[Country_rel];
