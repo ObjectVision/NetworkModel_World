@@ -42,12 +42,12 @@ container wms_layer_latlong
 	}
 
 	parameter<string> host   := 'tiles.geoservice.dlr.de';
-	parameter<string> layer := 'eoc:basemap';
+	parameter<string> layer  := 'LatLong basemap'; parameter<string> layer_src := 'eoc:basemap';
 	parameter<string> url    := 'https://' + host;
 	parameter<string> unit   := "degree";
 
 	parameter<string> target := 
-		'/service/wmts/?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=' + layer +
+		'/service/wmts/?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=' + layer_src +
 		'&STYLE=_empty&TileMatrixSet=EPSG%3A4326&TILEMATRIX=EPSG%3A4326%3A@TM@'+
 		'&TILEROW=@TR@&TILECOL=@TC@&FORMAT=image%2Fpng';
 }

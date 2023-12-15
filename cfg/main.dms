@@ -3,10 +3,37 @@ container NetworkModel_World
 	container MakeUnlinkedData
 	{
 		
+		parameter<string> Create_LandCells           := 'Ready', ExplicitSuppliers = "/SourceData/population/store_LandCells";
+		parameter<string> Create_SettlementCentroids := 'Ready', ExplicitSuppliers = "/SourceData/Settlements/CalcCentroids/Generate";
+		parameter<string> Create_Countries           := 'Ready', ExplicitSuppliers = "/SourceData/RegionalUnits/store_Countries";
+		parameter<string> Create_OSM_Continents_fss  := 'Ready', ExplicitSuppliers = "/SourceData/Infrastructure/OSM/Per_OSM_Continent/Generate_all";
+		
 		// parameter<string> Create_InitialLinkSet := 'Ready', ExplicitSuppliers = "/NetworkSetup/Base_Analysis/NetwerkSpec/CreateInitialWorkingNetwork/LinkSet_Write";
 		// parameter<string> Create_FinalNodeSet   := 'Ready', ExplicitSuppliers = "/NetworkSetup/Base_Analysis/NetwerkSpec/CreateMoreEfficientNetwork/FinalNodeSet_Write";
 		// parameter<string> Create_FinalLinkSet   := 'Ready', ExplicitSuppliers = "/NetworkSetup/Base_Analysis/NetwerkSpec/CreateMoreEfficientNetwork/FinalLinkSet_Write";
 		
+		container Create_InitialLinkSet_perContinent :=
+			for_each_nedv(
+				SourceData/RegionalUnits/Continents/name
+				, 'NetworkSetup/Per_Continent/'+SourceData/RegionalUnits/Continents/name+'/Store_Network1'
+				, void
+				, bool
+			);
+		container Create_OptimisedLinkNodeSet_perContinent :=
+			for_each_nedv(
+				SourceData/RegionalUnits/Continents/name
+				, 'NetworkSetup/Per_Continent/'+SourceData/RegionalUnits/Continents/name+'/Store_Network2'
+				, void
+				, bool
+			);
+			
+		container Create_Hierarchies_perContinent :=
+			for_each_nedv(
+				SourceData/RegionalUnits/Continents/name
+				, '/Analyses/Obtain_Settlement_Hierarchies/'+SourceData/RegionalUnits/Continents/name+'/Store_Hierarchies'
+				, void
+				, bool
+			);
 	}	
 	
 	
@@ -55,13 +82,7 @@ container NetworkModel_World
 					parameter<string>   OrgGridsize                    := ModelParameters/OrgGridsize;
 					parameter<string>   DestGridsize                   := ModelParameters/DestGridsize;
 					parameter<string>   MaxTravelTime                  := string(ModelParameters/MaxTravelTime);
-					parameter<string>   UseStreetTypeSubset            := string(ModelParameters/UseStreetTypeSubset);
-					parameter<string>   Street_OD_ConnectabletSelectie := ModelParameters/Street_OD_ConnectabletSelectie;
-					parameter<string>   StreetTypeSubsetSelectie       := ModelParameters/StreetTypeSubsetSelectie;
 					parameter<string>   NumberOfItersForNetworkCleanUp := string(ModelParameters/NumberOfItersForNetworkCleanUp);
-					parameter<string>   Use_Country_OD_selection       := string(ModelParameters/Use_Country_OD_selection);
-					parameter<string>   Roads_path                     := ModelParameters/Roads_path;
-					parameter<string>   CountryFolder                  := ModelParameters/CountryFolder;
 					parameter<string>   MaxCarSpeed                    := string(ModelParameters/Advanced/MaxCarSpeed);
 					parameter<string>   MaxCarSpeed_limit              := string(ModelParameters/Advanced/MaxCarSpeed_limit);
 					parameter<string>   CarDefaultSpeed                := string(ModelParameters/Advanced/CarDefaultSpeed);
