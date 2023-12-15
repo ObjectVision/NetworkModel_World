@@ -5,6 +5,7 @@ container RegionalUnits : using = "geometries"
 	, StorageReadOnly = "True"
 	{
 		attribute<string>           LabelText; 
+		attribute<string>           ZoneId; 
 		attribute<wgs84>            geometry (poly); 
 		attribute<WorldMollweide>   Geometry_MW (poly); 
 		attribute<Continents>       Continents_rel; 
@@ -14,6 +15,7 @@ container RegionalUnits : using = "geometries"
 	, storagename = "%NetworkModelWorld_DataDir%/Regions/fss/Countries.fss"
 	{
 		attribute<string>           LabelText          := Values;
+		attribute<string> 			ZoneId			   := first(Local_Units/GID_0, Local_Units/store_countries_rel);
 		attribute<wgs84>            geometry    (poly) := partitioned_union_polygon(Local_Units/geometry[BaseProjection_ip], Local_Units/store_countries_rel)[wgs84];
 		attribute<WorldMollweide>   Geometry_MW (poly) := convert(Convert_wgs84_mollweide/geometry_yx, WorldMollweide);
 		attribute<Continents>       Continents_rel     := first(Local_Units/Continents_rel, Local_Units/store_countries_rel);
