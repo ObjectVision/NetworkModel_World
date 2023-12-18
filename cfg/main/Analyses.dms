@@ -76,7 +76,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			parameter<inCountries> inCountry;
 			
 			unit<uint32> sep_Country_Units:= subset(in_sep_units/country_rel = inCountry) {
-				attribute<BaseProjection>   geometry_LL (poly) := in_sep_units/Geometry_LL[Nr_OrgEntity];
+				attribute<BaseProjection>   geometry (poly)    := in_sep_units/Geometry_LL[Nr_OrgEntity];
 				attribute<bool>				any_connection	   := pcount(Country_Connected_Grids/scu_rel) > 0;
 			}
 			
