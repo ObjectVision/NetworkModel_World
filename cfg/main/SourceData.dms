@@ -1,7 +1,7 @@
 container SourceData: Using = "Units;Classifications;geometries"
 {
 	
-	parameter<bool> store_fss:= True, explicitsuppliers = "RegionalUnits/store_Countries;population/store_LandCells;";
+	parameter<bool> store_fss:= True, explicitsuppliers = "RegionalUnits/store_Countries;population/store_LandCells;Settlements/CalcCentroids/Generate";
 	
 	#include<Infrastructure.dms>
 	#include<RegionalUnits.dms>
