@@ -34,17 +34,19 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 		
 		unit<uint32> Select:= range(uint32, 0, uint32(#Select_ui64)), dialogdata = "centroid", dialogtype = "map" 
 		{
-			attribute<ipoint>      org_rel     := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/org_rel)';
-			attribute<WGS84>       centroid    := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/centroid)';
-			attribute<WebMercator> centroid_wm := convert(point(PointCol(centroid), PointRow(centroid))[WGS84], WebMercator);
-			attribute<float32>     population  := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)[float32]';
-			attribute<sep_units>   sepunit_rel := point_in_polygon(centroid, sep_units/geometry_LL);
+			attribute<ipoint>    org_rel     := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/org_rel)';
+			attribute<WGS84>     centroid    := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/centroid)';
+			attribute<Geometries/WebMercator> centroid_wm:= convert(point(PointCol(centroid), PointRow(centroid))[WGS84], Geometries/WebMercator);
+			attribute<float32>   population  := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)[float32]';
+			attribute<sep_units> sepunit_rel := point_in_polygon(centroid, sep_units/geometry_LL);
+			attribute<Countries> country_rel := sep_units/Nr_OrgEntity[sepunit_rel];
 			
 			parameter<string> refname:= 'grids_1km';
 		}
 		unit<uint32> Countries := ='select_with_attr_by_cond(inCountries, inCountries/Continents_rel == Continents/v/'+Continent_name+')' 
 		{
 			attribute<string> Label           := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Label)';
+			attribute<string> ZoneId		  := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/ZoneId)';
 			attribute<WGS84>  Geometry (poly) := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry)';
 			unit<uint32>      border_points   := sequence2points(geometry) 
 			{
@@ -57,6 +59,7 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 		{
 			unit<uint32>        border_points      := sequence2points(geometry) {attribute<WGS84> points_div := (point[dpoint] / point(1000d, 1000d, dpoint))[WGS84];}
 			attribute<WGS84>    geometry_LL (poly) := points2sequence_pso(border_points/points_div, border_points/sequence_rel, border_points/ordinal);
+			attribute<Countries>country_rel		   := Nr_OrgEntity;
 		}
 		
 		// establish islands here (make connections to right, right/bottom, bottom)
