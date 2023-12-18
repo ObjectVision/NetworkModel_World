@@ -4,8 +4,11 @@ container Geometries : using = "units"
 	unit<ipoint> BaseProjection_ip := gridset(BaseProjection,  point(0.001d, 0.001d), point(0.0d, 0.0d), ipoint); 
 	
 	#include <wms_layer_latlong.dms>
+	//#include <tms_layer_osm_webmercator.dms>
+	
 	unit<dpoint> WorldMollweide    : SpatialReference = "ESRI:54009";
-	unit<dpoint> WebMercator_base : SpatialReference = "EPSG:3857";
+	unit<dpoint> WebMercator       : SpatialReference = "EPSG:3857";//;,   DialogData = "tms_layer_osm_webmercator", Label = "WebMercator";
+	
 	unit<dpoint> WGS84 : SpatialReference = "EPSG:4326", DialogData = "wms_layer_latlong"
 	{
 		parameter<float32> ViewPortMinSize := 100f / 3600f;
