@@ -29,6 +29,7 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 		unit<uint64>      inUnit;
 		parameter<string> Continent_name;
 		unit<uint32>      inCountries;
+		unit<uint32>	  inCountry_Sep_Units:= RegionalUnits/sep_units;
 		//
 		unit<uint64> Select_ui64 := ='select_with_attr_by_cond(inUnit,  inUnit/continent_rel == Continents/v/'+Continent_name+')';
 		
@@ -38,8 +39,9 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 			attribute<WGS84>     centroid    := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/centroid)';
 			attribute<Geometries/WebMercator> centroid_wm:= convert(point(PointCol(centroid), PointRow(centroid))[WGS84], Geometries/WebMercator);
 			attribute<float32>   population  := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)[float32]';
-			attribute<sep_units> sepunit_rel := point_in_polygon(centroid, sep_units/geometry_LL);
-			attribute<Countries> country_rel := sep_units/Nr_OrgEntity[sepunit_rel];
+			attribute<inCountry_Sep_Units> allsepunits_rel := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/Sep_unit_rel)';
+			attribute<sep_units> sepunit_rel := rlookup(allsepunits_rel, sep_units/Nr_OrgEntity);
+			attribute<Countries> country_rel := sep_units/country_rel[sepunit_rel];
 			
 			parameter<string> refname:= 'grids_1km';
 		}
@@ -48,18 +50,15 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 			attribute<string> Label           := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Label)';
 			attribute<string> ZoneId		  := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/ZoneId)';
 			attribute<WGS84>  Geometry (poly) := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry)';
-			unit<uint32>      border_points   := sequence2points(geometry) 
-			{
-				attribute<dpoint> points_x1000 := point[dpoint] * point(1000d, 1000d, dpoint);
-			}
-			
-			attribute<ipoint> iGeom (poly)    := points2sequence_pso(border_points/points_x1000, border_points/sequence_rel, border_points/ordinal)[ipoint];
+			attribute<inCountries>  Nr_OrgEntity    := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', id(inCountries))';
 		}
-		unit<uint32> sep_units:= split_polygon(Countries/iGeom) 
+		unit<uint32> sep_units:= ='select_with_attr_by_cond(inCountry_Sep_Units, inCountry_Sep_Units/Continents_rel == Continents/v/'+Continent_name+')' 
 		{
-			unit<uint32>        border_points      := sequence2points(geometry) {attribute<WGS84> points_div := (point[dpoint] / point(1000d, 1000d, dpoint))[WGS84];}
-			attribute<WGS84>    geometry_LL (poly) := points2sequence_pso(border_points/points_div, border_points/sequence_rel, border_points/ordinal);
-			attribute<Countries>country_rel		   := Nr_OrgEntity;
+			attribute<string> 		ZoneId		  		:= ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/ZoneId)';
+			attribute<WGS84>  		Geometry (poly) 	:= ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/Geometry_LL)';
+			attribute<inCountries>	allcountries_rel	:= ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/country_rel)';
+			attribute<Countries>	country_rel			:= rlookup(allcountries_rel, Countries/Nr_OrgEntity);
+			attribute<inCountry_Sep_Units>  Nr_OrgEntity    := ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', id(inCountry_Sep_Units))';
 		}
 		
 		// establish islands here (make connections to right, right/bottom, bottom)
