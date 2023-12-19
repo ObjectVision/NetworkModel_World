@@ -11,6 +11,22 @@ container RegionalUnits : using = "geometries"
 		attribute<WebMercator>      Geometry_WM (poly); 
 		attribute<WorldMollweide>   Geometry_MW (poly); 
 		attribute<Continents>       Continents_rel; 
+		
+		unit<uint32>      border_points   := sequence2points(geometry) 
+		{
+			attribute<dpoint> points_x1000 := point[dpoint] * point(1000d, 1000d, dpoint);
+		}
+			
+		attribute<ipoint> iGeom (poly)    := points2sequence_pso(border_points/points_x1000, border_points/sequence_rel, border_points/ordinal)[ipoint];
+	}
+	unit<uint32> Sep_units
+	: storagename = "= propvalue(store_sep_units, 'StorageName')"
+	, StorageReadOnly = "True"
+	{
+		attribute<string>           ZoneId:= Countries/ZoneId[country_rel] + '_' + string(id(.)); 
+		attribute<wgs84>            geometry_LL (poly); 
+		attribute<Continents>       Continents_rel; 
+		attribute<Countries>		country_rel;
 	}
 	
 	unit<uint32> store_Countries := unique(Local_Units/Country)
@@ -37,7 +53,17 @@ container RegionalUnits : using = "geometries"
 			attribute<wgs84> Geometry_yx (poly, ..) := union_data(store_Countries, Country_ui32/Geometry_yx);
 		}
 	}
-
+	
+	unit<uint32> store_sep_units:= split_polygon(Countries/iGeom), descr = "separated polygons that entail a country."
+	, storagename = "%NetworkModelWorld_DataDir%/Regions/fss/sep_units.fss"
+	{
+		attribute<WGS84>    geometry_LL (poly) := points2sequence_pso(border_points/points_div, border_points/sequence_rel, border_points/ordinal);
+		attribute<Continents> Continents_rel   := Countries/Continents_rel[Nr_OrgEntity];
+		attribute<Countries>country_rel		   := Nr_OrgEntity;
+		
+		unit<uint32>        border_points      := sequence2points(geometry) {attribute<WGS84> points_div := (point[dpoint] / point(1000d, 1000d, dpoint))[WGS84];}
+	}
+	
 	unit<uint32> Local_Units //Countries 
 	: StorageName = "%NetworkModelWorld_DataDir%/Regions/gadm_410.gpkg"
 	, StorageType = "gdal.vect"
