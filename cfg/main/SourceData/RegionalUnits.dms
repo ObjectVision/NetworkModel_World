@@ -7,6 +7,7 @@ container RegionalUnits : using = "geometries"
 		attribute<string>           Label; 
 		attribute<string>           ZoneId; 
 		attribute<wgs84>            geometry (poly); 
+		attribute<wgs84>            geometry_LL (poly) := geometry;
 		attribute<WebMercator>      Geometry_WM (poly); 
 		attribute<WorldMollweide>   Geometry_MW (poly); 
 		attribute<Continents>       Continents_rel; 
