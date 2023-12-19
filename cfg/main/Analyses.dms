@@ -42,7 +42,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			attribute<BaseProjection> Geometry:= inSettlements/Geometry[Nr_OrgEntity];
 			attribute<FinalNodeSet> NodeId:= inSettlements/NodeId[Nr_OrgEntity];
 			attribute<float32> Pop:= float32(inSettlements/Pop[Nr_OrgEntity]);
-			attribute<inCountries> 	  Country_rel:= point_in_polygon(Geometry, inCountries/Geometry);
+			attribute<inCountries> 	  Country_rel:= point_in_polygon(Geometry, inCountries/Geometry_LL);
 			//attribute<RelevantSettlements> rs_id:				expr = "point_in_polygon(Geometry, RelevantSettlements/Geometry)";
 		}
 		
