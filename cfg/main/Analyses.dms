@@ -23,8 +23,10 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		', NetworkSetup/GridPoints_Per_Continent/'+Continents/name+'/Countries' 
 		', NetworkSetup/GridPoints_Per_Continent/'+Continents/name+'/sep_units' 
 		', NetworkSetup/Per_Continent/'+Continents/Name+'/NetwerkSpec/CreateMoreEfficientNetwork'
-		', 6[thresholds]'
+		', 6[thresholds], 50000[float32]'
 		')');
+	
+	#include<Functional_Rural_Areas.dms>
 	
 	Template Prepare_Catchments_T {
 		parameter<string> 		Continent_name;
@@ -34,25 +36,28 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		unit<uint32>			in_sep_units;
 		container 				NetwerkSpec;
 		parameter<thresholds> 	inThreshold;
-	
+		parameter<float32>		minPop;
+		
 		unit<uint32> FinalLinkSet := NetwerkSpec/FinalLinkSet_Read;
 		unit<uint32> FinalNodeSet := NetwerkSpec/FinalNodeSet_Read;
 	
-		unit<uint32> SelectedSettlements:= = 'subset(bool(inSettlements/'+thresholds/name[inThreshold]+'))' {// && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))' : 'subset(float32(Localcentres_ReadOnly/size) > 0f && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))'" {
+		unit<uint32> SelectedSettlements:= = 'subset(bool(inSettlements/'+thresholds/name[inThreshold]+') && float32(inSettlements/Pop) >= minPop)' {// && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))' : 'subset(float32(Localcentres_ReadOnly/size) > 0f && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))'" {
 			attribute<BaseProjection> Geometry:= inSettlements/Geometry[Nr_OrgEntity];
+			attribute<string>		  Label:= inSettlements/Label[Nr_OrgEntity];
+			attribute<WorldMollweide> centroid_mw:= convert(point(PointCol(Geometry), PointRow(Geometry))[BaseProjection], WorldMollweide);
 			attribute<FinalNodeSet> NodeId:= inSettlements/NodeId[Nr_OrgEntity];
 			attribute<float32> Pop:= float32(inSettlements/Pop[Nr_OrgEntity]);
 			attribute<inCountries> 	  Country_rel:= point_in_polygon(Geometry, inCountries/Geometry_LL);
 			//attribute<RelevantSettlements> rs_id:				expr = "point_in_polygon(Geometry, RelevantSettlements/Geometry)";
 		}
 		
-		attribute<Geometries/WebMercator> inGrids_centroid_wm (inGrids):= convert(point(PointCol(inGrids/centroid), PointRow(inGrids/centroid))[BaseProjection], Geometries/WebMercator);
+		attribute<WebMercator> inGrids_centroid_wm (inGrids):= convert(point(PointCol(inGrids/centroid), PointRow(inGrids/centroid))[BaseProjection], WebMercator);
 		attribute<FinalNodeSet> Closest_node (inGrids):= connect(FinalNodeSet/geometry, inGrids_centroid_wm);
 		attribute<bool>			Close_enough (inGrids):= dist(inGrids_centroid_wm, FinalNodeSet/geometry[Closest_node]) < 100d;
 		attribute<FinalNodeSet> Dest_NodeId (inGrids):= Close_enough ? Closest_node : const(0 / 0, inGrids, FinalNodeSet);
 		
 		unit<uint32> Unconnected_Grids:= subset(IsNull(Dest_NodeId)) {
-			attribute<Geometries/WebMercator> Geometry:= inGrids_centroid_wm[Nr_OrgEntity];
+			attribute<WebMercator> Geometry:= inGrids_centroid_wm[Nr_OrgEntity];
 			attribute<BaseProjection>	geometry_LL:= inGrids/centroid[Nr_OrgEntity];
 			attribute<inCountries> 	Country_rel:= inGrids/Country_rel[Nr_OrgEntity];
 			attribute<in_sep_units> Sep_unit_rel:= inGrids/sepunit_rel[Nr_OrgEntity];
@@ -60,7 +65,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		}
 		
 		unit<uint32> Connected_Grids:= subset(IsDefined(Dest_NodeId)) {
-			attribute<Geometries/WebMercator> Geometry:= inGrids_centroid_wm[Nr_OrgEntity];
+			attribute<WebMercator> Geometry:= inGrids_centroid_wm[Nr_OrgEntity];
 			attribute<BaseProjection>	geometry_LL:= inGrids/centroid[Nr_OrgEntity];
 			attribute<FinalNodeSet> NodeId:= Dest_NodeId[Nr_OrgEntity];
 			attribute<float32>		Pop:= inGrids/population[Nr_OrgEntity];
@@ -84,12 +89,14 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			
 			unit<uint32> Country_Settlements:= subset(SelectedSettlements/Country_rel = inCountry) {
 				attribute<BaseProjection> 	Geometry:= SelectedSettlements/Geometry[Nr_OrgEntity];
+				attribute<WorldMollweide> 	Geometry_mw:= SelectedSettlements/centroid_mw[Nr_OrgEntity];
+				attribute<string>		  	Label:= SelectedSettlements/Label[Nr_OrgEntity];
 				attribute<float32>		 	Pop:= 	SelectedSettlements/Pop[Nr_OrgEntity];
 				attribute<FinalNodeSet> NodeId:= SelectedSettlements/NodeId[Nr_OrgEntity];
 			}
 			unit<uint32> Country_Unconnected_Grids:= subset(Unconnected_Grids/country_rel = inCountry) {
-				attribute<Geometries/WebMercator> Geometry:= 	Unconnected_Grids/Geometry[Nr_OrgEntity];
-				attribute<Geometries/WorldMollweide> Geometry_mw:= (Unconnected_Grids/Geometry[Nr_OrgEntity])[Geometries/WorldMollweide];
+				attribute<WebMercator> Geometry:= 	Unconnected_Grids/Geometry[Nr_OrgEntity];
+				attribute<WorldMollweide> Geometry_mw:= (Unconnected_Grids/Geometry[Nr_OrgEntity])[WorldMollweide];
 				attribute<BaseProjection>			 geometry_LL:= 	Unconnected_Grids/geometry_LL[Nr_OrgEntity];
 				attribute<sep_Country_Units> 		 scu_rel:= 		rlookup(Unconnected_Grids/sep_unit_rel[Nr_OrgEntity], sep_Country_Units/Nr_OrgEntity);
 				attribute<float32>					 Pop:= 			Unconnected_Grids/Pop[Nr_OrgEntity];
@@ -97,8 +104,8 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				//attribute<Country_Connected_Grids> 
 			}
 			unit<uint32> Country_Connected_Grids:= subset(Connected_Grids/country_rel = inCountry) {
-				attribute<Geometries/WebMercator> Geometry:= Connected_Grids/Geometry[Nr_OrgEntity];
-				attribute<Geometries/WorldMollweide> Geometry_mw:= (Connected_Grids/Geometry[Nr_OrgEntity])[Geometries/WorldMollweide];
+				attribute<WebMercator> Geometry:= Connected_Grids/Geometry[Nr_OrgEntity];
+				attribute<WorldMollweide> Geometry_mw:= (Connected_Grids/Geometry[Nr_OrgEntity])[WorldMollweide];
 				attribute<BaseProjection>			 geometry_LL:= Connected_Grids/geometry_LL[Nr_OrgEntity];
 				attribute<sep_Country_Units> 		 scu_rel:= 		rlookup(Connected_Grids/sep_unit_rel[Nr_OrgEntity], sep_Country_Units/Nr_OrgEntity);
 				attribute<float32>		Pop:= Connected_Grids/Pop[Nr_OrgEntity];
@@ -149,7 +156,8 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 					attribute<Country_Settlements> 	  		dependent_point:= ='union_data(., Specification_Reference/dependent_point, '+asitemlist(sep_Country_Units/ZoneId+'/dependent_point')+')';
 					attribute<Geometries/WorldMollweide>    geometry_mw_poly (poly)        := points2sequence(makepoly/Point, makepoly/SeqNr, makepoly/Ordinal);
 					
-					attribute<ipoint>						Polyset (poly)				   := points2sequence(makepoly/iPoints, makepoly/SeqNr, makepoly/Ordinal);
+					attribute<ipoint>						iPoly (poly)				   := points2sequence(makepoly/iPoints, makepoly/SeqNr, 4 - makepoly/Ordinal);
+					//attribute<ipoint>						Polyset (poly)				   := points2sequence(makepoly/iPoints, makepoly/SeqNr, 4 - makepoly/Ordinal);
 					
 					unit<uint32> makepoly:= union_unit(all_grids, all_grids, all_grids, all_grids, all_grids) {
 						attribute<Geometries/WorldMollweide> point:= union_data(., 
@@ -162,21 +170,8 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 						attribute<all_grids> SeqNr:= union_data(., id(all_grids), id(all_grids), id(all_grids), id(all_grids), id(all_grids));
 						attribute<uint32>       Ordinal := id(.) / #all_grids;
 					}
-					
-					// shift coordinates so they start at 0,0.
-					//parameter<int32> minX:= min(pointRow(lower_bound(geometry_mw_poly)));
-					//parameter<int32> minY:= min(pointCol(lower_bound(geometry_mw_poly)));
 					parameter<Geometries/WorldMollweide> shiftpoint:= min(Geometry_mw) - point(500d, 500d, Geometries/WorldMollweide);
 					parameter<ipoint> divpoint:= point(1000i, 1000i, ipoint);
-					
-					parameter<ipoint> unipoly (polygon):= union_polygon(ipolygon(Polyset));
-					
-					attribute<half> hid:= (id(all_grids) > const(#all_grids / 2, all_grids, uint32))[half];
-					
-					
-					unit<uint32> half: nrofrows = 2 {
-						attribute<ipoint> ipoly_test (polygon):= partitioned_union_polygon(ipolygon(iPolyset), hid);
-					}
 				}
 			}
 			
@@ -206,15 +201,21 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 					attribute<proto_catchments> cs_id (Add_Unconnected_Grids/all_grids): 	expr = "rlookup(dependent, proto_catchments/Values)";
 					unit<uint32> all_catchments: expr = "unique(dependent)", DialogData = "ipoly", DialogType = "map" {
 						attribute<ipoint> 	ipoly 	(polygon): expr = "partitioned_union_polygon(Add_Unconnected_Grids/all_grids/iPoly, ac_id)";
-						attribute<Geometries/WorldMollweide> 	poly 	(polygon): expr = "ipoly[Geometries/WorldMollweide]";
+						attribute<WorldMollweide> poly (poly) := points2sequence_pso(border_points/points_mul, border_points/sequence_rel, border_points/ordinal);
 						attribute<float32>			   			sqkm:= area(poly, float64)[float32] / (1000f * 1000f);
+						attribute<float32>						pop:= sum(Add_Unconnected_Grids/all_grids/pop, ac_id);
 						//attribute<bool>				   fua:= Values > #RelevantSettlements && FUA_exclusion;
 						attribute<bool>				  			 fua:= const(false,.,bool);
+						
+						unit<uint32>           border_points      := sequence2points(ipoly) 
+						{
+							attribute<WorldMollweide> points_mul := (point[dpoint] * point(1000d, 1000d, dpoint))[WorldMollweide];
+						}
 					}
 					unit<uint32> proto_catchments: expr = "subset(!all_catchments/fua)", DialogData = "ipoly", DialogType = "map" {
 						attribute<uint32> Values:= 	   all_catchments/Values[Nr_OrgEntity];
 						attribute<ipoint> 			   ipoly 	(polygon): expr = "all_catchments/ipoly[Nr_OrgEntity]";
-						attribute<Geometries/WorldMollweide> poly 	(polygon): expr = "all_catchments/poly[Nr_OrgEntity]";
+						attribute<WorldMollweide> poly 	(polygon): expr = "all_catchments/poly[Nr_OrgEntity]";
 						attribute<float32>			   sqkm:= area(poly, float64)[float32] / (1000f * 1000f);
 						attribute<bool>				   fua:= all_catchments/fua[Nr_OrgEntity];
 						attribute<.>				   org_dep:= id(.);
@@ -222,7 +223,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 					unit<uint32> fua_catchments: expr = "subset(all_catchments/fua)", DialogData = "ipoly", DialogType = "map" {
 						attribute<uint32> Values:= all_catchments/Values[Nr_OrgEntity];
 						attribute<ipoint> 			   ipoly 	(polygon): expr = "all_catchments/ipoly[Nr_OrgEntity]";
-						attribute<Geometries/WorldMollweide> poly 	(polygon): expr = "all_catchments/poly[Nr_OrgEntity]";
+						attribute<WorldMollweide> poly 	(polygon): expr = "all_catchments/poly[Nr_OrgEntity]";
 						attribute<float32>			   sqkm:= area(poly, float64)[float32] / (1000f * 1000f);
 						attribute<bool>				   fua:= all_catchments/fua[Nr_OrgEntity];
 					}
@@ -236,7 +237,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				container nextValue {
 					attribute<split_proto_catchments> spc_id (Add_Unconnected_Grids/all_grids): expr = "point_in_polygon(Add_Unconnected_Grids/all_grids/point, split_proto_catchments/poly)";	
 					unit<uint32> split_proto_catchments:= split_polygon(currValue/proto_catchments/ipoly) {
-						attribute<Geometries/WorldMollweide> poly (polygon):= Geometry[Geometries/WorldMollweide];
+						attribute<WorldMollweide> poly (polygon):= Geometry[WorldMollweide];
 						attribute<float32> sqkm:= area(Geometry, int32)[float32] / (1000f * 1000f);
 						attribute<float32> relsize:= sqkm / currValue/proto_catchments/sqkm[Nr_OrgEntity];
 						attribute<float32> Pop:= sum(Add_Unconnected_Grids/all_grids/Pop, spc_id);
@@ -283,33 +284,33 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 					}
 				}
 			}
-			//attribute<cleaned_catchments> cs_id (OriginPoints):= point_in_polygon(OriginPoints/Point, cleaned_catchments/poly);
-			//attribute<cleaned_catchments> Catchment_Id (Settlements):= point_in_polygon(CountrySettlements/centroid, cleaned_catchments/poly);
+			attribute<cleaned_catchments> cs_id (Add_Unconnected_Grids/all_grids):= point_in_polygon(Add_Unconnected_Grids/all_grids/Geometry_mw, cleaned_catchments/poly);
+			attribute<cleaned_catchments> Catchment_Id (Country_Settlements):= point_in_polygon(Country_Settlements/Geometry_mw, cleaned_catchments/poly);
 			unit<uint32> cleaned_catchments:= union_unit(results_choice/proto_catchments, cleanup_catchments/init/fua_catchments ) {
-				attribute<Geometries/WorldMollweide> 	poly (polygon):= union_data(., results_choice/proto_catchments/poly, cleanup_catchments/init/fua_catchments/poly);
-				attribute<bool>					fua:= union_data(., results_choice/proto_catchments/fua, cleanup_catchments/init/fua_catchments/fua);
+				attribute<WorldMollweide> 	poly (polygon):= union_data(., results_choice/proto_catchments/poly, cleanup_catchments/init/fua_catchments/poly);
+				attribute<bool>				fua:= union_data(., results_choice/proto_catchments/fua, cleanup_catchments/init/fua_catchments/fua);
 				//attribute<bool>					exclv:= union_data(., results_choice/proto_catchments/exclv, const(false, cleanup_catchments/init/fua_catchments, bool));
-				//attribute<Settlements> biggest_settlement:= max_index(Settlements/Pop, Catchment_Id);
+				attribute<Country_Settlements> biggest_settlement:= max_index(Country_Settlements/Pop, Catchment_Id);
 			}
-			parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Catchments/'+thresholds/name[inThreshold]+'/'+Continent_Name+'/'+inCountries/ZoneId[inCountry];
+			parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Catchments/'+thresholds/name[inThreshold]+'_pop'+string(minPop / 1000f)+'/'+Continent_Name+'/'+inCountries/ZoneId[inCountry];
 			
-			unit<uint32> all_centres: expr = "cleaned_catchments", DialogData = "poly", DialogType = "map", StorageName = "= filepath+'.dbf'" {
-				attribute<Geometries/WorldMollweide>	poly (polygon): expr = "cleaned_catchments/poly", StorageName = "= filepath+'.shp'";
-				attribute<float32>				Pop:			expr = "sum(OriginPoints/Pop, cs_id)";
+			unit<uint32> all_catchments: expr = "cleaned_catchments", DialogData = "poly", DialogType = "map", StorageName = "= filepath+'.dbf'" {
+				attribute<WorldMollweide>	poly (polygon): expr = "cleaned_catchments/poly", StorageName = "= filepath+'.shp'";
+				attribute<float32>				Pop:			expr = "sum(Add_Unconnected_Grids/all_grids/Pop, cs_id)";
 				attribute<uint8>				fua:			expr = "uint8(cleaned_catchments/fua)";
 				//attribute<uint8>				exclv:			expr = "uint8(cleaned_catchments/exclv)";
 				//attribute<string> 				Name: 			expr = "exclv < 1b ? MakeDefined(Settlements/LabelText[biggest_settlement], 'None') : 'Exclaves '+region_unit/ZoneId[inRegion]";
-				//attribute<uint32>				SettId:			expr = "biggest_settlement";
+				attribute<uint32>				SettId:			expr = "biggest_settlement";
 				//attribute<string> 				category:		expr = "MakeDefined(Settlements/category[biggest_settlement], 'None')";
 				//attribute<float32>		  		med_t:= 		rth_element(tt, 0.5f, dependent)[Values];
 				//attribute<float32>				max_t:= 		max(tt, dependent)[Values];
 				//attribute<float32>				mw_t:= 			(sum(OriginPoints/Pop * tt, dependent) / sum(OriginPoints/Pop, dependent))[Values];
 			}
-			unit<uint32> all_centres_readonly: StorageName = "= propvalue(all_centres/poly, 'StorageName')", StorageType = "gdal.vect", StorageReadOnly = "True" {
-				attribute<Geometries/WorldMollweide> 	Geometry (polygon);
-				attribute<Settlements> 		settRef:= SettId[Settlements];
-				attribute<Network/NodeSet>	NodeRef:= MakeDefined(Settlements/NodeRef[settRef], OriginPoints/NodeRef[connect(OriginPoints/point, centroid_or_mid(Geometry))]);
-				attribute<string>			Sttl_ID:= Settlements/Sttl_ID[settRef];
+			unit<uint32> all_catchments_readonly: StorageName = "= propvalue(all_catchments/poly, 'StorageName')", StorageType = "gdal.vect", StorageReadOnly = "True" {
+				attribute<WorldMollweide> 		Geometry (polygon);
+				attribute<Country_Settlements> 	settRef:= SettId[Country_Settlements];
+				attribute<FinalNodeSet>			NodeRef:= Country_Settlements/NodeId[settRef]; //, Country_Connected_Grids/NodeId[connect(Country_Connected_Grids/Geometry_mw, centroid_or_mid(Geometry))]);
+				attribute<string>				Label:= Country_Settlements/Label[settRef];
 			}
 		}
 	}
@@ -388,6 +389,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				attribute<BaseProjection> Geometry;
 				attribute<Connected_Settlements> Connected_Settlements_rel:= rlookup(LabelText, Connected_Settlements/LabelText);
 				attribute<FinalNodeSet> 		 NodeId:= Connected_Settlements/NodeId[Connected_Settlements_rel];
+				attribute<string>			     Label:= LabelText; // drop in later stage as Labels are stored since a previous revision.
 			}	
 	}
 }
