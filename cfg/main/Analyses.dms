@@ -213,7 +213,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 						}
 					}
 					unit<uint32> proto_catchments: expr = "subset(!all_catchments/fua)", DialogData = "ipoly", DialogType = "map" {
-						attribute<uint32> Values:= 	   all_catchments/Values[Nr_OrgEntity];
+						attribute<Country_Settlements> Values:= 	   all_catchments/Values[Nr_OrgEntity];
 						attribute<ipoint> 			   ipoly 	(polygon): expr = "all_catchments/ipoly[Nr_OrgEntity]";
 						attribute<WorldMollweide> poly 	(polygon): expr = "all_catchments/poly[Nr_OrgEntity]";
 						attribute<float32>			   sqkm:= area(poly, float64)[float32] / (1000f * 1000f);
@@ -285,12 +285,13 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				}
 			}
 			attribute<cleaned_catchments> cs_id (Add_Unconnected_Grids/all_grids):= point_in_polygon(Add_Unconnected_Grids/all_grids/Geometry_mw, cleaned_catchments/poly);
-			attribute<cleaned_catchments> Catchment_Id (Country_Settlements):= point_in_polygon(Country_Settlements/Geometry_mw, cleaned_catchments/poly);
+			attribute<cleaned_catchments> Catchment_Id (Country_Settlements):= MakeDefined(invert(cleaned_catchments/Values), point_in_polygon(Country_Settlements/Geometry_mw, cleaned_catchments/poly));
 			unit<uint32> cleaned_catchments:= union_unit(results_choice/proto_catchments, cleanup_catchments/init/fua_catchments ) {
+				attribute<Country_Settlements>	Values:= union_data(., results_choice/proto_catchments/Values, cleanup_catchments/init/fua_catchments/Values);
 				attribute<WorldMollweide> 	poly (polygon):= union_data(., results_choice/proto_catchments/poly, cleanup_catchments/init/fua_catchments/poly);
 				attribute<bool>				fua:= union_data(., results_choice/proto_catchments/fua, cleanup_catchments/init/fua_catchments/fua);
 				//attribute<bool>					exclv:= union_data(., results_choice/proto_catchments/exclv, const(false, cleanup_catchments/init/fua_catchments, bool));
-				attribute<Country_Settlements> biggest_settlement:= max_index(Country_Settlements/Pop, Catchment_Id);
+				attribute<Country_Settlements> biggest_settlement:= MakeDefined(Values, max_index(Country_Settlements/Pop, Catchment_Id));
 			}
 			parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Catchments/'+thresholds/name[inThreshold]+'_pop'+string(minPop / 1000f)+'/'+Continent_Name+'/'+inCountries/ZoneId[inCountry];
 			
