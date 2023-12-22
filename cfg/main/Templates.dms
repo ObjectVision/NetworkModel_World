@@ -118,11 +118,13 @@ container Templates: Using = "Units;Classifications;geometries"
 				attribute<WebMercator>      first_point;
 				attribute<WebMercator>      last_point;
 				attribute<bool>             IsOD_connection_road;
-				attribute<s_f>              impedance             := convert(minutes, s_f) + Float64(CorrectImpedanceForCrossroads/impedance_Start + CorrectImpedanceForCrossroads/impedance_End);
+				attribute<s_f>              impedance             := convert(minutes, s_f);// + Float64(CorrectImpedanceForCrossroads/impedance_Start + CorrectImpedanceForCrossroads/impedance_End);
 				attribute<NodeSet_fromRead> F1                    := rlookup(first_point, NodeSet_fromRead/Values); //node from the OD towards the network
 				attribute<NodeSet_fromRead> F2                    := rlookup(last_point,  NodeSet_fromRead/Values); //network node to which the the OD is connected 
 				attribute<min_f>            Minutes               := MakeDefined(convert((LengthKm / KPH), min_f), 0.0001[min_f]);
 				attribute<WebMercator>      geometry (arc)        := points2sequence(PointSet_fromRead/Point[WebMercator], PointSet_fromRead/SeqNr, PointSet_fromRead/Ordinal);
+				attribute<float32> 			KPH_from_imp		  := float32(LengthKm) / (float32(impedance) / 3600f);
+				attribute<float32> 			KPH_from_min		  := float32(LengthKm) / (float32(Minutes) / 60f);
 				
 				unit<uint32> PointSet_fromRead:= union_unit(., .)
 				{
@@ -506,7 +508,7 @@ container Templates: Using = "Units;Classifications;geometries"
 		attribute<NodeSet_domain> F2 (LinkSet_domain);
 		unit<uint32>              seldomain;
 		///
-		attribute<WGS84>          seldomain_geom (poly, seldomain) := seldomain/geometry_ll;
+		attribute<WGS84>          seldomain_geom (poly, seldomain) := seldomain/geometry;
 		
 		attribute<seldomain>              seldomain_rel  (NodeSet_domain) := point_in_polygon(NodeSet_domain/geometry_LL, seldomain_geom);
 		attribute<upoint>                 nps_comb       (NodeSet_domain) := point(Networks/PartNr, seldomain_rel);

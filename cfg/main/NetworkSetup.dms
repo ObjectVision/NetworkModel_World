@@ -19,7 +19,7 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 				'+quote(Continents/label)+
 				',Settlements_Per_Continent/'+Continents/name+'/Select'    //orgs
 				',GridPoints_Per_Continent/'+Continents/name+'/Select'     //dests
-				',GridPoints_Per_Continent/'+Continents/name+'/sep_units_LL'  //dests
+				',GridPoints_Per_Continent/'+Continents/name+'/sep_units'  //dests
 			')'
 		);
 	
