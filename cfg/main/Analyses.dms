@@ -1,115 +1,145 @@
 container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceData/RegionalUnits" 
 {  
-	
-	unit<uint32> thresholds: nrofrows= 25 {
-		attribute<min_f>   num: expr = "(float32(id(.)) * 5f)[min_f]";
-		attribute<s_f> 	   num_s_f: expr = "convert(num, s_f)";
-		attribute<string>  padnum: expr = "num < 10[min_f] ? '0' + string(num) : string(num)";
-		attribute<string>  ns:	 expr = "string(num_s_f)+'f'";
-		attribute<string>  name: expr = "'L_'+padnum+'min'";
+	unit<uint32> thresholds: nrofrows = 25 
+	{
+		attribute<min_f>   num     := (float32(id(.)) * 5f)[min_f];
+		attribute<s_f> 	   num_s_f := convert(num, s_f);
+		attribute<string>  padnum  := num < 10[min_f] ? '0' + string(num) : string(num);
+		attribute<string>  ns      := string(num_s_f)+'f';
+		attribute<string>  name    := 'L_'+padnum+'min';
 	}
 	
-	container Obtain_Settlement_Hierarchies:= for_each_ne(Continents/Name, 
-		'Settlement_Hierarchy_T('+quote(Continents/label)+
-		', NetworkSetup/Settlements_Per_Continent/'+Continents/name+'/Select'    //orgs
-		', NetworkSetup/Settlements_Per_Continent/'+Continents/name+'/Select'  
-		', NetworkSetup/Per_Continent/'+Continents/Name+'/NetwerkSpec/CreateMoreEfficientNetwork'
-		')');
+	container Obtain_Settlement_Hierarchies:= 
+		for_each_ne(
+			Continents/Name
+			,'Settlement_Hierarchy_T('+quote(Continents/label)+
+				', NetworkSetup/Settlements_Per_Continent/'+Continents/name+'/Select'    //orgs
+				', NetworkSetup/Settlements_Per_Continent/'+Continents/name+'/Select'  
+				', NetworkSetup/Per_Continent/'+Continents/Name+'/NetwerkSpec/CreateMoreEfficientNetwork'
+			')'
+		);
 	
-	container Create_Centres_Catchments:= for_each_ne(Continents/Name, 
-		'Prepare_Catchments_T('+quote(Continents/label)+
-		', Obtain_Settlement_Hierarchies/'+Continents/name+'/Hierarchies_ReadOnly'    //orgs
-		', NetworkSetup/GridPoints_Per_Continent/'+Continents/name+'/select' 
-		', NetworkSetup/GridPoints_Per_Continent/'+Continents/name+'/Countries' 
-		', NetworkSetup/GridPoints_Per_Continent/'+Continents/name+'/sep_units' 
-		', NetworkSetup/Per_Continent/'+Continents/Name+'/NetwerkSpec/CreateMoreEfficientNetwork'
-		', 6[thresholds], 50000[float32]'
-		')');
+	container Create_Centres_Catchments:= 
+		for_each_ne(
+			Continents/Name 
+			,'Prepare_Catchments_T('+quote(Continents/label)+
+				', Obtain_Settlement_Hierarchies/'+Continents/name+'/Hierarchies_ReadOnly'    //orgs
+				', NetworkSetup/GridPoints_Per_Continent/'+Continents/name+'/select' 
+				', NetworkSetup/GridPoints_Per_Continent/'+Continents/name+'/Countries' 
+				', NetworkSetup/GridPoints_Per_Continent/'+Continents/name+'/sep_units' 
+				', NetworkSetup/Per_Continent/'+Continents/Name+'/NetwerkSpec/CreateMoreEfficientNetwork'
+				', 6[thresholds], 50000[float32]'
+			')'
+		);
 	
 	#include<Functional_Rural_Areas.dms>
 	
-	Template Prepare_Catchments_T {
-		parameter<string> 		Continent_name;
-		unit<uint32> 			inSettlements;
-		unit<uint32>			inGrids;
-		unit<uint32>			inCountries;
-		unit<uint32>			in_sep_units;
-		container 				NetwerkSpec;
-		parameter<thresholds> 	inThreshold;
-		parameter<float32>		minPop;
+	Template Prepare_Catchments_T 
+	{
+		parameter<string>     Continent_name;
+		unit<uint32>          inSettlements;
+		unit<uint32>          inGrids;
+		unit<uint32>          inCountries;
+		unit<uint32>          in_sep_units;
+		container             NetwerkSpec;
+		parameter<thresholds> inThreshold;
+		parameter<float32>    minPop;
 		
 		unit<uint32> FinalLinkSet := NetwerkSpec/FinalLinkSet_Read;
 		unit<uint32> FinalNodeSet := NetwerkSpec/FinalNodeSet_Read;
 	
-		unit<uint32> SelectedSettlements:= = 'subset(bool(inSettlements/'+thresholds/name[inThreshold]+') && float32(inSettlements/Pop) >= minPop)' {// && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))' : 'subset(float32(Localcentres_ReadOnly/size) > 0f && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))'" {
-			attribute<BaseProjection> Geometry:= inSettlements/Geometry[Nr_OrgEntity];
-			attribute<string>		  Label:= inSettlements/Label[Nr_OrgEntity];
-			attribute<WorldMollweide> centroid_mw:= convert(point(PointCol(Geometry), PointRow(Geometry))[BaseProjection], WorldMollweide);
-			attribute<FinalNodeSet> NodeId:= inSettlements/NodeId[Nr_OrgEntity];
-			attribute<float32> Pop:= float32(inSettlements/Pop[Nr_OrgEntity]);
-			attribute<inCountries> 	  Country_rel:= point_in_polygon(Geometry, inCountries/Geometry_LL);
-			//attribute<RelevantSettlements> rs_id:				expr = "point_in_polygon(Geometry, RelevantSettlements/Geometry)";
+		unit<uint32> SelectedSettlements:= = 'select_with_org_rel(bool(inSettlements/'+thresholds/name[inThreshold]+') && float32(inSettlements/Pop) >= minPop)' // && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))' : 'subset(float32(Localcentres_ReadOnly/size) > 0f && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))'" {
+		{
+			attribute<BaseProjection> Geometry    := inSettlements/point[org_rel];
+			attribute<string>         Label       := inSettlements/Label[org_rel];
+			attribute<WorldMollweide> centroid_mw := convert(point(PointCol(Geometry), PointRow(Geometry))[BaseProjection], WorldMollweide);
+			attribute<FinalNodeSet>   NodeId      := inSettlements/NodeId[org_rel];
+			attribute<float32>        Pop         := float32(inSettlements/Pop[org_rel]);
+			attribute<inCountries> 	  Country_rel := point_in_polygon(Geometry, inCountries/Geometry_LL);
+			// attribute<RelevantSettlements> rs_id  := point_in_polygon(Geometry, RelevantSettlements/Geometry);
 		}
 		
-		attribute<WebMercator> inGrids_centroid_wm (inGrids):= convert(point(PointCol(inGrids/centroid), PointRow(inGrids/centroid))[BaseProjection], WebMercator);
-		attribute<FinalNodeSet> Closest_node (inGrids):= connect(FinalNodeSet/geometry, inGrids_centroid_wm);
-		attribute<bool>			Close_enough (inGrids):= dist(inGrids_centroid_wm, FinalNodeSet/geometry[Closest_node]) < 100d;
-		attribute<FinalNodeSet> Dest_NodeId (inGrids):= Close_enough ? Closest_node : const(0 / 0, inGrids, FinalNodeSet);
+		attribute<BaseProjection>  inGrids_centroid_wgs    (inGrids) := inGrids/centroid;
+		attribute<float64>         inGrids_centroid_wgs_y  (inGrids) := PointCol(inGrids/centroid);
+		attribute<float64>         inGrids_centroid_wgs_x  (inGrids) := PointRow(inGrids/centroid);
+		attribute<BaseProjection>  inGrids_centroid_wgs_yx (inGrids) := point(inGrids_centroid_wgs_y, inGrids_centroid_wgs_x, BaseProjection);
+		attribute<WebMercator>     inGrids_centroid_wm     (inGrids) := convert(inGrids_centroid_wgs_yx, WebMercator);
 		
-		unit<uint32> Unconnected_Grids:= subset(IsNull(Dest_NodeId)) {
-			attribute<WebMercator> Geometry:= inGrids_centroid_wm[Nr_OrgEntity];
-			attribute<BaseProjection>	geometry_LL:= inGrids/centroid[Nr_OrgEntity];
-			attribute<inCountries> 	Country_rel:= inGrids/Country_rel[Nr_OrgEntity];
-			attribute<in_sep_units> Sep_unit_rel:= inGrids/sepunit_rel[Nr_OrgEntity];
-			attribute<float32>		Pop:= inGrids/population[Nr_OrgEntity];
+		attribute<WebMercator>     inGrids_centroid_wm_old (inGrids) := convert(point(PointCol(inGrids/centroid), PointRow(inGrids/centroid))[BaseProjection], WebMercator);
+		
+		
+		
+		
+		attribute<FinalNodeSet> Closest_node        (inGrids) := connect(FinalNodeSet/geometry, inGrids_centroid_wm);
+		attribute<bool>         Close_enough        (inGrids) := dist(inGrids_centroid_wm, FinalNodeSet/geometry[Closest_node]) < 100d;
+		attribute<FinalNodeSet> Dest_NodeId         (inGrids) := Close_enough ? Closest_node : const(0 / 0, inGrids, FinalNodeSet);
+		
+		unit<uint32> Unconnected_Grids:= select_with_org_rel(IsNull(Dest_NodeId))
+		{
+			attribute<WebMercator>      Geometry     := inGrids_centroid_wm[org_rel];
+			attribute<BaseProjection>   geometry_LL  := inGrids/centroid[org_rel];
+			attribute<inCountries>      Country_rel  := inGrids/Country_rel[org_rel];
+			attribute<in_sep_units>     Sep_unit_rel := inGrids/sepunit_rel[org_rel];
+			attribute<float32>          Pop          := inGrids/population[org_rel];
 		}
 		
-		unit<uint32> Connected_Grids:= subset(IsDefined(Dest_NodeId)) {
-			attribute<WebMercator> Geometry:= inGrids_centroid_wm[Nr_OrgEntity];
-			attribute<BaseProjection>	geometry_LL:= inGrids/centroid[Nr_OrgEntity];
-			attribute<FinalNodeSet> NodeId:= Dest_NodeId[Nr_OrgEntity];
-			attribute<float32>		Pop:= inGrids/population[Nr_OrgEntity];
-			attribute<inCountries> 	Country_rel:= inGrids/Country_rel[Nr_OrgEntity];
-			attribute<in_sep_units> Sep_unit_rel:= inGrids/sepunit_rel[Nr_OrgEntity];
+		unit<uint32> Connected_Grids:= select_with_org_rel(IsDefined(Dest_NodeId)) 
+		{
+			attribute<WebMercator>      Geometry     := inGrids_centroid_wm[org_rel];
+			attribute<BaseProjection>   geometry_LL  := inGrids/centroid[org_rel];
+			attribute<FinalNodeSet>     NodeId       := Dest_NodeId[org_rel];
+			attribute<float32>          Pop          := inGrids/population[org_rel];
+			attribute<inCountries>      Country_rel  := inGrids/Country_rel[org_rel];
+			attribute<in_sep_units>     Sep_unit_rel := inGrids/sepunit_rel[org_rel];
 		}
 		
-		Container Country_Catchments:= for_each_ne(inCountries/ZoneId, 'Create_Country_Catchments_T('+string(id(inCountries))+')');
+		Container Country_Catchments:= 
+			for_each_ne(
+				inCountries/ZoneId
+				, 'Create_Country_Catchments_T('+string(id(inCountries))+')'
+			);
 		
-		Template Create_Country_Catchments_T {
-			
+		Template Create_Country_Catchments_T 
+		{
 			parameter<inCountries> inCountry;
+			///
+			parameter<bool>        Use_Grav_spec := False;
 			
-			parameter<bool>			Use_Grav_spec:= False;
-			
-			unit<uint32> sep_Country_Units:= subset(in_sep_units/country_rel = inCountry) {
-				attribute<BaseProjection>   geometry (poly)    := in_sep_units/Geometry[Nr_OrgEntity];
-				attribute<string>   		ZoneId             := in_sep_units/ZoneId[Nr_OrgEntity];
-				attribute<bool>				any_connection	   := pcount(Country_Connected_Grids/scu_rel) > 0;
+			unit<uint32> sep_Country_Units := select_with_org_rel(in_sep_units/country_rel = inCountry) 
+			{
+				attribute<BaseProjection>     geometry (poly)    := in_sep_units/Geometry[org_rel];
+				attribute<string>             ZoneId             := in_sep_units/ZoneId[org_rel];
+				attribute<bool>               any_connection     := pcount(Country_Connected_Grids/scu_rel) > 0;
 			}
 			
-			unit<uint32> Country_Settlements:= subset(SelectedSettlements/Country_rel = inCountry) {
-				attribute<BaseProjection> 	Geometry:= SelectedSettlements/Geometry[Nr_OrgEntity];
-				attribute<WorldMollweide> 	Geometry_mw:= SelectedSettlements/centroid_mw[Nr_OrgEntity];
-				attribute<string>		  	Label:= SelectedSettlements/Label[Nr_OrgEntity];
-				attribute<float32>		 	Pop:= 	SelectedSettlements/Pop[Nr_OrgEntity];
-				attribute<FinalNodeSet> NodeId:= SelectedSettlements/NodeId[Nr_OrgEntity];
+			unit<uint32> Country_Settlements := select_with_org_rel(SelectedSettlements/Country_rel = inCountry) 
+			{
+				attribute<BaseProjection>     Geometry    := SelectedSettlements/Geometry[org_rel];
+				attribute<WorldMollweide>     Geometry_mw := SelectedSettlements/centroid_mw[org_rel];
+				attribute<string>             Label       := SelectedSettlements/Label[org_rel];
+				attribute<float32>            Pop         := SelectedSettlements/Pop[org_rel];
+				attribute<FinalNodeSet>       NodeId      := SelectedSettlements/NodeId[org_rel];
 			}
-			unit<uint32> Country_Unconnected_Grids:= subset(Unconnected_Grids/country_rel = inCountry) {
-				attribute<WebMercator> Geometry:= 	Unconnected_Grids/Geometry[Nr_OrgEntity];
-				attribute<WorldMollweide> Geometry_mw:= (Unconnected_Grids/Geometry[Nr_OrgEntity])[WorldMollweide];
-				attribute<BaseProjection>			 geometry_LL:= 	Unconnected_Grids/geometry_LL[Nr_OrgEntity];
-				attribute<sep_Country_Units> 		 scu_rel:= 		rlookup(Unconnected_Grids/sep_unit_rel[Nr_OrgEntity], sep_Country_Units/Nr_OrgEntity);
-				attribute<float32>					 Pop:= 			Unconnected_Grids/Pop[Nr_OrgEntity];
-				attribute<bool> 					 conn_scu:= 	sep_Country_Units/any_connection[scu_rel];
+			
+			unit<uint32> Country_Unconnected_Grids := select_with_org_rel(Unconnected_Grids/country_rel = inCountry) 
+			{
+				attribute<WebMercator>        Geometry    := Unconnected_Grids/Geometry[org_rel];
+				attribute<WorldMollweide>     Geometry_mw := (Unconnected_Grids/Geometry[org_rel])[WorldMollweide];
+				attribute<BaseProjection>     geometry_LL := Unconnected_Grids/geometry_LL[org_rel];
+				attribute<sep_Country_Units>  scu_rel     := rlookup(Unconnected_Grids/sep_unit_rel[org_rel], sep_Country_Units/org_rel);
+				attribute<float32>            Pop         := Unconnected_Grids/Pop[org_rel];
+				attribute<bool>               conn_scu    := sep_Country_Units/any_connection[scu_rel];
 				//attribute<Country_Connected_Grids> 
 			}
-			unit<uint32> Country_Connected_Grids:= subset(Connected_Grids/country_rel = inCountry) {
-				attribute<WebMercator> Geometry:= Connected_Grids/Geometry[Nr_OrgEntity];
-				attribute<WorldMollweide> Geometry_mw:= (Connected_Grids/Geometry[Nr_OrgEntity])[WorldMollweide];
-				attribute<BaseProjection>			 geometry_LL:= Connected_Grids/geometry_LL[Nr_OrgEntity];
-				attribute<sep_Country_Units> 		 scu_rel:= 		rlookup(Connected_Grids/sep_unit_rel[Nr_OrgEntity], sep_Country_Units/Nr_OrgEntity);
-				attribute<float32>		Pop:= Connected_Grids/Pop[Nr_OrgEntity];
-				attribute<FinalNodeSet> NodeId:= Connected_Grids/NodeId[Nr_OrgEntity];
+			
+			unit<uint32> Country_Connected_Grids := select_with_org_rel(Connected_Grids/country_rel = inCountry) 
+			{
+				attribute<WebMercator>        Geometry    := Connected_Grids/Geometry[org_rel];
+				attribute<WorldMollweide>     Geometry_mw := (Connected_Grids/Geometry[org_rel])[WorldMollweide];
+				attribute<BaseProjection>     geometry_LL := Connected_Grids/geometry_LL[org_rel];
+				attribute<sep_Country_Units>  scu_rel     := rlookup(Connected_Grids/sep_unit_rel[org_rel], sep_Country_Units/org_rel);
+				attribute<float32>            Pop         := Connected_Grids/Pop[org_rel];
+				attribute<FinalNodeSet>       NodeId      := Connected_Grids/NodeId[org_rel];
 				
 				//unit<uint32> make_polygons:= union_unit(Country_Connected_Grids,Country_Connected_Grids,Country_Connected_Grids,Country_Connected_Grids) {
 				//	attribute<Geometries/WorldMollweide> point:= union_data(., 
@@ -118,8 +148,8 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			
 
 			//parameter<bool>			Abs_Size_filter:= True;
-			parameter<float32>		Grav_func:= -2f;
-			parameter<bool>			Identify_exclaves:= True;
+			parameter<float32>   Grav_func:= -2f;
+			parameter<bool>      Identify_exclaves:= True;
 			
 			// settlement node definition (either all grid cells in a settlement or the centroid; not used here yeta
 			/*unit<uint32> SelDestinationPoints: expr = "subset(IsDefined(rlookup(DestinationPoints/RelSettRef, SelectedOutputs/rs_id)) && (!Use_Grav_spec || DestinationPoints/Centroid_snap))" {
@@ -129,9 +159,17 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				attribute<float32> 	Pop:= DestinationPoints/Pop[Nr_OrgEntity];
 			}*/
 			
-			container Find_Only_Closest {
-				attribute<s_f> Closest_TravelTime (FinalNodeSet): expr = "dijkstra_s('bidirectional(link_flag);startPoint(Node_rel);node:TraceBack', "
-					"FinalLinkSet/impedance, FinalLinkSet/F1, FinalLinkSet/F2, !FinalLinkSet/IsOneDirection, Country_Settlements/NodeId)";
+			container Find_Only_Closest 
+			{
+				attribute<s_f> Closest_TravelTime (FinalNodeSet) := 
+					impedance_table(
+						'bidirectional(link_flag);startPoint(Node_rel);node:TraceBack'
+						, FinalLinkSet/impedance
+						, FinalLinkSet/F1
+						, FinalLinkSet/F2
+						, !FinalLinkSet/IsOneDirection
+						, Country_Settlements/NodeId
+					);
 					
 				attribute<Country_Settlements> service_area 	(FinalNodeSet) := rlookup(service_area(FinalLinkSet/F1, FinalLinkSet/F2, Closest_TravelTime/TraceBack), Country_Settlements/NodeId);				
 				attribute<Country_Settlements> dependent_point	(Country_Connected_Grids):= service_area[Country_Connected_Grids/NodeId];
@@ -148,173 +186,229 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			}*/
 			container Specification_Reference:= =Use_Grav_spec ? 'Gravity_spec' : 'Find_Only_Closest';		
 			
-			container Add_Unconnected_Grids:= for_each_ne(sep_Country_Units/ZoneId, (sep_Country_Units/any_connection ? 'Add_Unconnected_Grids__wconn_T(' : 'Add_Unconnected_Grids__noconn_T(')+string(id(sep_Country_Units))+')') {
-				unit<uint32> all_grids:= ='union_unit(Country_Connected_Grids,'+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids')+')' {
-					attribute<Geometries/WebMercator> 		Geometry:= ='union_data(., Country_Connected_Grids/Geometry, '+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids/Geometry')+')';
-					attribute<float32> 						Pop:= ='union_data(., Country_Connected_Grids/Pop, '+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids/Pop')+')';
-					attribute<Geometries/WorldMollweide> 	Geometry_mw:= Geometry[Geometries/WorldMollweide];
-					attribute<Country_Settlements> 	  		dependent_point:= ='union_data(., Specification_Reference/dependent_point, '+asitemlist(sep_Country_Units/ZoneId+'/dependent_point')+')';
-					attribute<Geometries/WorldMollweide>    geometry_mw_poly (poly)        := points2sequence(makepoly/Point, makepoly/SeqNr, makepoly/Ordinal);
+			container Add_Unconnected_Grids := 
+				for_each_ne(
+					sep_Country_Units/ZoneId
+					, (sep_Country_Units/any_connection ? 'Add_Unconnected_Grids__wconn_T(' : 'Add_Unconnected_Grids__noconn_T(')+string(id(sep_Country_Units))+')'
+				) 
+			{
+				unit<uint32> all_grids:= ='union_unit(Country_Connected_Grids,'+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids')+')' 
+				{
+					attribute<Geometries/WebMercator>       Geometry                 := ='union_data(., Country_Connected_Grids/Geometry, '+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids/Geometry')+')';
+					attribute<float32>                      Pop                      := ='union_data(., Country_Connected_Grids/Pop, '+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids/Pop')+')';
+					attribute<Geometries/WorldMollweide>    Geometry_mw              := Geometry[Geometries/WorldMollweide];
+					attribute<Country_Settlements>          dependent_point          := ='union_data(., Specification_Reference/dependent_point, '+asitemlist(sep_Country_Units/ZoneId+'/dependent_point')+')';
+					attribute<Geometries/WorldMollweide>    geometry_mw_poly (poly)  := points2sequence(makepoly/Point, makepoly/SeqNr, makepoly/Ordinal);
 					
-					attribute<ipoint>						iPoly (poly)				   := points2sequence(makepoly/iPoints, makepoly/SeqNr, 4 - makepoly/Ordinal);
-					//attribute<ipoint>						Polyset (poly)				   := points2sequence(makepoly/iPoints, makepoly/SeqNr, 4 - makepoly/Ordinal);
+					attribute<ipoint>                       iPoly (poly)             := points2sequence(makepoly/iPoints, makepoly/SeqNr, 4 - makepoly/Ordinal);
+					//attribute<ipoint>                     Polyset (poly)             := points2sequence(makepoly/iPoints, makepoly/SeqNr, 4 - makepoly/Ordinal);
 					
-					unit<uint32> makepoly:= union_unit(all_grids, all_grids, all_grids, all_grids, all_grids) {
-						attribute<Geometries/WorldMollweide> point:= union_data(., 
-							Geometry_mw + const(point(-500d,  500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide), 
-							Geometry_mw + const(point( 500d,  500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide), 
-							Geometry_mw + const(point( 500d, -500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide), 
-							Geometry_mw + const(point(-500d, -500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide),
-							Geometry_mw + const(point(-500d,  500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide));
-						attribute<ipoint>	iPoints:= point[ipoint] / divpoint;
-						attribute<all_grids> SeqNr:= union_data(., id(all_grids), id(all_grids), id(all_grids), id(all_grids), id(all_grids));
-						attribute<uint32>       Ordinal := id(.) / #all_grids;
+					unit<uint32> makepoly:= union_unit(all_grids, all_grids, all_grids, all_grids, all_grids) 
+					{
+						attribute<Geometries/WorldMollweide> point   := union_data(., 
+																	Geometry_mw + const(point(-500d,  500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide), 
+																	Geometry_mw + const(point( 500d,  500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide), 
+																	Geometry_mw + const(point( 500d, -500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide), 
+																	Geometry_mw + const(point(-500d, -500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide),
+																	Geometry_mw + const(point(-500d,  500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide));
+						attribute<ipoint>                    iPoints := point[ipoint] / divpoint;
+						attribute<all_grids>                 SeqNr   := union_data(., id(all_grids), id(all_grids), id(all_grids), id(all_grids), id(all_grids));
+						attribute<uint32>                    Ordinal := id(.) / #all_grids;
 					}
-					parameter<Geometries/WorldMollweide> shiftpoint:= min(Geometry_mw) - point(500d, 500d, Geometries/WorldMollweide);
-					parameter<ipoint> divpoint:= point(1000i, 1000i, ipoint);
+					
+					parameter<WorldMollweide> shiftpoint := min(Geometry_mw) - point(500d, 500d, Geometries/WorldMollweide);
+					parameter<ipoint>         divpoint   := point(1000i, 1000i, ipoint);
 				}
 			}
 			
-			Template Add_Unconnected_Grids__wconn_T {
+			Template Add_Unconnected_Grids__wconn_T 
+			{
 				parameter<sep_Country_Units> in_sep_unit_nr;
 				
-				unit<uint32> sepunit_unconnected_grids:= subset(Country_Unconnected_Grids/scu_rel = in_sep_unit_nr) {attribute<Geometries/WebMercator> Geometry:= Country_Unconnected_Grids/Geometry[Nr_OrgEntity]; attribute<float32> pop:= Country_Unconnected_Grids/pop[Nr_OrgEntity];}
-				unit<uint32> sepunit_connected_grids:=   subset(Country_Connected_Grids/scu_rel = in_sep_unit_nr) {attribute<Geometries/WebMercator> Geometry:= Country_Connected_Grids/Geometry[Nr_OrgEntity]; attribute<Country_Settlements> dep_point:= Specification_Reference/dependent_point[Nr_OrgEntity];}
+				unit<uint32> sepunit_unconnected_grids := select_with_org_rel(Country_Unconnected_Grids/scu_rel = in_sep_unit_nr) 
+				{
+					attribute<WebMercator> Geometry  := Country_Unconnected_Grids/Geometry[org_rel]; 
+					attribute<float32>     pop       := Country_Unconnected_Grids/pop[org_rel];
+				}
+				unit<uint32> sepunit_connected_grids   := select_with_org_rel(Country_Connected_Grids/scu_rel = in_sep_unit_nr) 
+				{
+					attribute<WebMercator>         Geometry  := Country_Connected_Grids/Geometry[org_rel]; 
+					attribute<Country_Settlements> dep_point := Specification_Reference/dependent_point[org_rel];
+				}
 				
 				attribute<Country_Settlements> dependent_point (sepunit_unconnected_grids):= sepunit_connected_grids/dep_point[connect(sepunit_connected_grids/Geometry, sepunit_unconnected_grids/Geometry)];
 			}
-			Template Add_Unconnected_Grids__noconn_T {
+			
+			Template Add_Unconnected_Grids__noconn_T 
+			{
 				parameter<sep_Country_Units> in_sep_unit_nr;
 
-				unit<uint32> sepunit_unconnected_grids:= subset(Country_Unconnected_Grids/scu_rel = in_sep_unit_nr) {attribute<Geometries/WebMercator> Geometry:= Country_Unconnected_Grids/Geometry[Nr_OrgEntity]; attribute<float32> pop:= Country_Unconnected_Grids/pop[Nr_OrgEntity];}
+				unit<uint32> sepunit_unconnected_grids:= select_with_org_rel(Country_Unconnected_Grids/scu_rel = in_sep_unit_nr) 
+				{
+					attribute<Geometries/WebMercator> Geometry:= Country_Unconnected_Grids/Geometry[org_rel]; 
+					attribute<float32> pop:= Country_Unconnected_Grids/pop[org_rel];
+				}
 				
 				attribute<Country_Settlements> dependent_point (sepunit_unconnected_grids):= const(#Country_Settlements*100 + in_sep_unit_nr, sepunit_unconnected_grids, Country_Settlements);
 			}
 
-			attribute<Country_Settlements> dependent			(Add_Unconnected_Grids/all_grids):= Add_Unconnected_Grids/all_grids/dependent_point;
+			attribute<Country_Settlements> dependent (Add_Unconnected_Grids/all_grids) := Add_Unconnected_Grids/all_grids/dependent_point;
 		
 			container results_choice:= cleanup_catchments/init; //cleanup_catchments/iterative_cleaning/lastIter/nextValue
 		
-			container cleanup_catchments {
-				container init {
-					attribute<all_catchments> ac_id (Add_Unconnected_Grids/all_grids): 	expr = "rlookup(dependent, all_catchments/Values)";
-					attribute<proto_catchments> cs_id (Add_Unconnected_Grids/all_grids): 	expr = "rlookup(dependent, proto_catchments/Values)";
-					unit<uint32> all_catchments: expr = "unique(dependent)", DialogData = "ipoly", DialogType = "map" {
-						attribute<ipoint> 	ipoly 	(polygon): expr = "partitioned_union_polygon(Add_Unconnected_Grids/all_grids/iPoly, ac_id)";
-						attribute<WorldMollweide> poly (poly) := points2sequence_pso(border_points/points_mul, border_points/sequence_rel, border_points/ordinal);
-						attribute<float32>			   			sqkm:= area(poly, float64)[float32] / (1000f * 1000f);
-						attribute<float32>						pop:= sum(Add_Unconnected_Grids/all_grids/pop, ac_id);
-						//attribute<bool>				   fua:= Values > #RelevantSettlements && FUA_exclusion;
-						attribute<bool>				  			 fua:= const(false,.,bool);
+			container cleanup_catchments 
+			{
+				container init 
+				{
+					attribute<all_catchments>   ac_id (Add_Unconnected_Grids/all_grids) := rlookup(dependent, all_catchments/Values);
+					attribute<proto_catchments> cs_id (Add_Unconnected_Grids/all_grids) := rlookup(dependent, proto_catchments/Values);
+					
+					unit<uint32> all_catchments:= unique(dependent), DialogData = "ipoly", DialogType = "map" 
+					{
+						attribute<ipoint>         ipoly (poly) := partitioned_union_polygon(Add_Unconnected_Grids/all_grids/iPoly, ac_id);
+						attribute<WorldMollweide> poly  (poly) := points2sequence_pso(border_points/points_mul, border_points/sequence_rel, border_points/ordinal);
+						attribute<float32>        sqkm         := area(poly, float64)[float32] / (1000f * 1000f);
+						attribute<float32>        pop          := sum(Add_Unconnected_Grids/all_grids/pop, ac_id);
+						// attribute<bool>           fua       := Values > #RelevantSettlements && FUA_exclusion;
+						attribute<bool>           fua          := const(false,.,bool);
 						
 						unit<uint32>           border_points      := sequence2points(ipoly) 
 						{
 							attribute<WorldMollweide> points_mul := (point[dpoint] * point(1000d, 1000d, dpoint))[WorldMollweide];
 						}
 					}
-					unit<uint32> proto_catchments: expr = "subset(!all_catchments/fua)", DialogData = "ipoly", DialogType = "map" {
-						attribute<Country_Settlements> Values:= 	   all_catchments/Values[Nr_OrgEntity];
-						attribute<ipoint> 			   ipoly 	(polygon): expr = "all_catchments/ipoly[Nr_OrgEntity]";
-						attribute<WorldMollweide> poly 	(polygon): expr = "all_catchments/poly[Nr_OrgEntity]";
-						attribute<float32>			   sqkm:= area(poly, float64)[float32] / (1000f * 1000f);
-						attribute<bool>				   fua:= all_catchments/fua[Nr_OrgEntity];
-						attribute<.>				   org_dep:= id(.);
+					
+					unit<uint32> proto_catchments:= select_with_org_rel(!all_catchments/fua), DialogData = "ipoly", DialogType = "map" 
+					{
+						attribute<Country_Settlements> Values       := all_catchments/Values[org_rel];
+						attribute<ipoint>              ipoly (poly) := all_catchments/ipoly[org_rel];
+						attribute<WorldMollweide>      poly (poly)  := all_catchments/poly[org_rel];
+						attribute<float32>             sqkm         := area(poly, float64)[float32] / (1000f * 1000f);
+						attribute<bool>                fua          := all_catchments/fua[org_rel];
+						attribute<.>                   org_dep      := id(.);
 					}
-					unit<uint32> fua_catchments: expr = "subset(all_catchments/fua)", DialogData = "ipoly", DialogType = "map" {
-						attribute<uint32> Values:= all_catchments/Values[Nr_OrgEntity];
-						attribute<ipoint> 			   ipoly 	(polygon): expr = "all_catchments/ipoly[Nr_OrgEntity]";
-						attribute<WorldMollweide> poly 	(polygon): expr = "all_catchments/poly[Nr_OrgEntity]";
-						attribute<float32>			   sqkm:= area(poly, float64)[float32] / (1000f * 1000f);
-						attribute<bool>				   fua:= all_catchments/fua[Nr_OrgEntity];
+					
+					unit<uint32> fua_catchments:= select_with_org_rel(all_catchments/fua), DialogData = "ipoly", DialogType = "map" 
+					{
+						attribute<uint32>              Values       := all_catchments/Values[org_rel];
+						attribute<ipoint>              ipoly (poly) := all_catchments/ipoly[org_rel];
+						attribute<WorldMollweide>      poly  (poly) := all_catchments/poly[org_rel];
+						attribute<float32>             sqkm         := area(poly, float64)[float32] / (1000f * 1000f);
+						attribute<bool>                fua          := all_catchments/fua[org_rel];
 					}
 				}
 				container iterative_cleaning:= loop(iterative_cleaner, uint16(10));
 			}
 			
-			Template iterative_cleaner {
+			Template iterative_cleaner 
+			{
 				parameter<uint16> nrIter;
 				container currValue:= init;
-				container nextValue {
-					attribute<split_proto_catchments> spc_id (Add_Unconnected_Grids/all_grids): expr = "point_in_polygon(Add_Unconnected_Grids/all_grids/point, split_proto_catchments/poly)";	
-					unit<uint32> split_proto_catchments:= split_polygon(currValue/proto_catchments/ipoly) {
-						attribute<WorldMollweide> poly (polygon):= Geometry[WorldMollweide];
-						attribute<float32> sqkm:= area(Geometry, int32)[float32] / (1000f * 1000f);
-						attribute<float32> relsize:= sqkm / currValue/proto_catchments/sqkm[Nr_OrgEntity];
-						attribute<float32> Pop:= sum(Add_Unconnected_Grids/all_grids/Pop, spc_id);
-						attribute<uint32>  conn:= pcount(spc_conn_matrix/F1) + pcount(spc_conn_matrix/F2);
-						attribute<bool>	   fua:= currValue/proto_catchments/fua[Nr_OrgEntity];
-						attribute<uint32>	org_dep:= currValue/proto_catchments/org_dep[Nr_OrgEntity];
-						attribute<bool> 	no_pop:= Pop < 100f;
-						attribute<bool>		only_fua_neighbours:= all(spc_conn_matrix/cfua, spc_conn_matrix/F1) && all(spc_conn_matrix/cfua, spc_conn_matrix/F2);
-						attribute<bool>		no_neighbours:= pcount(spc_conn_matrix/F1) + pcount(spc_conn_matrix/F2) < 1;
-						attribute<bool>		only_prior_neighbours:= all(spc_conn_matrix/prior_rel, spc_conn_matrix/F1) && all(spc_conn_matrix/prior_rel, spc_conn_matrix/F2);
-						attribute<bool>	   	small_absolute_size:= Abs_Size_filter && sqkm <= 100f;
-						attribute<bool>		small_relative_size:= relsize < 0.1f;
-						attribute<bool>		doesnot_contain_centre:= pcount(point_in_polygon(SelDestinationPoints/Geometry, poly)) < 1;
+				container nextValue 
+				{
+					attribute<split_proto_catchments> spc_id (Add_Unconnected_Grids/all_grids):= point_in_polygon(Add_Unconnected_Grids/all_grids/point, split_proto_catchments/poly);
+					
+					unit<uint32> split_proto_catchments := split_polygon(currValue/proto_catchments/ipoly) 
+					{
+						attribute<WorldMollweide>  poly            (poly) := Geometry[WorldMollweide];
+						attribute<float32>         sqkm                   := area(Geometry, int32)[float32] / (1000f * 1000f);
+						attribute<float32>         relsize                := sqkm / currValue/proto_catchments/sqkm[org_rel];
+						attribute<float32>         Pop                    := sum(Add_Unconnected_Grids/all_grids/Pop, spc_id);
+						attribute<uint32>          conn                   := pcount(spc_conn_matrix/F1) + pcount(spc_conn_matrix/F2);
+						attribute<bool>	           fua                    := currValue/proto_catchments/fua[org_rel];
+						attribute<uint32>          org_dep                := currValue/proto_catchments/org_dep[org_rel];
+						attribute<bool>            no_pop                 := Pop < 100f;
+						attribute<bool>            only_fua_neighbours    := all(spc_conn_matrix/cfua, spc_conn_matrix/F1) && all(spc_conn_matrix/cfua, spc_conn_matrix/F2);
+						attribute<bool>            no_neighbours          := pcount(spc_conn_matrix/F1) + pcount(spc_conn_matrix/F2) < 1;
+						attribute<bool>            only_prior_neighbours  := all(spc_conn_matrix/prior_rel, spc_conn_matrix/F1) && all(spc_conn_matrix/prior_rel, spc_conn_matrix/F2);
+						attribute<bool>            small_absolute_size    := Abs_Size_filter && sqkm <= 100f;
+						attribute<bool>            small_relative_size    := relsize < 0.1f;
+						attribute<bool>            doesnot_contain_centre := pcount(point_in_polygon(SelDestinationPoints/Geometry, poly)) < 1;
 						
-						attribute<bool> 	drop:= no_pop && (!Abs_Size_filter || small_absolute_size) && (only_fua_neighbours || no_neighbours || only_prior_neighbours);
-						attribute<bool>		join:= (small_absolute_size || small_relative_size || doesnot_contain_centre) && !no_neighbours && !only_fua_neighbours;
-						attribute<bool>		exclave:= Identify_exclaves && !fua && !drop && doesnot_contain_centre && (only_fua_neighbours || no_neighbours || only_prior_neighbours);
+						attribute<bool>            drop                   := no_pop && (!Abs_Size_filter || small_absolute_size) && (only_fua_neighbours || no_neighbours || only_prior_neighbours);
+						attribute<bool>            join                   := (small_absolute_size || small_relative_size || doesnot_contain_centre) && !no_neighbours && !only_fua_neighbours;
+						attribute<bool>            exclave                := Identify_exclaves && !fua && !drop && doesnot_contain_centre && (only_fua_neighbours || no_neighbours || only_prior_neighbours);
 						
-						attribute<spc_conn_matrix> fbest:= max_index(spc_conn_matrix/score,spc_conn_matrix/F1);
-						attribute<spc_conn_matrix> tbest:= max_index(spc_conn_matrix/score,spc_conn_matrix/F2);
-						attribute<float32> fscore:= makedefined(spc_conn_matrix/score[fbest], -1f);
-						attribute<float32> tscore:= makedefined(spc_conn_matrix/score[tbest], -1f);
+						attribute<spc_conn_matrix> fbest                  := max_index(spc_conn_matrix/score,spc_conn_matrix/F1);
+						attribute<spc_conn_matrix> tbest                  := max_index(spc_conn_matrix/score,spc_conn_matrix/F2);
+						attribute<float32>         fscore                 := makedefined(spc_conn_matrix/score[fbest], -1f);
+						attribute<float32>         tscore                 := makedefined(spc_conn_matrix/score[tbest], -1f);
 						
-						attribute<.> candidate:= switch(case(fua, Nr_OrgEntity), case(drop, (0 / 0)[.]), case(exclave, #.+1), case(join && fscore >= tscore, spc_conn_matrix/F2[fbest]), case(join && tscore > fscore, spc_conn_matrix/F1[tbest]), id(.));
-						attribute<.> jointo:= candidate[candidate] = id(.) ? min_elem(candidate, id(.)) : candidate;
+						attribute<.>               candidate              := switch(
+																				case(fua, org_rel)
+																				, case(drop, (0 / 0)[.])
+																				, case(exclave, #.+1)
+																				, case(join && fscore >= tscore, spc_conn_matrix/F2[fbest])
+																				, case(join && tscore > fscore, spc_conn_matrix/F1[tbest])
+																				, id(.)
+																			);
+						attribute<.>               jointo                 := candidate[candidate] = id(.) ? min_elem(candidate, id(.)) : candidate;
 						//attribute<.> jointo:= !join[candidate_check_swaps] ? candidate_check_swaps : candidate_check_swaps[candidate_check_swaps];
 						
-						attribute<proto_catchments> pc_id:= rlookup(jointo, proto_catchments/Values);
+						attribute<proto_catchments>pc_id                  := rlookup(jointo, proto_catchments/Values);
 						
-						unit<uint32> spc_conn_matrix:= polygon_connectivity(Geometry) {
-							attribute<bool> 	cfua:= fua[F1] || fua[F2];
-							attribute<bool>		prior_rel:= Nr_OrgEntity[F1] == Nr_OrgEntity[F2];
-							attribute<bool>		unpreferred:= cfua || prior_rel;
-							attribute<float32>	score:= (float32(!cfua) * max_elem(Pop[F1], Pop[F2])) / (1f + (float32(prior_rel) * 1000f));
+						unit<uint32> spc_conn_matrix:= polygon_connectivity(Geometry) 
+						{
+							attribute<bool>     cfua        := fua[F1] || fua[F2];
+							attribute<bool>     prior_rel   := org_rel[F1] == org_rel[F2];
+							attribute<bool>     unpreferred := cfua || prior_rel;
+							attribute<float32>  score       := (float32(!cfua) * max_elem(Pop[F1], Pop[F2])) / (1f + (float32(prior_rel) * 1000f));
 						}
 					}
-					unit<uint32> proto_catchments:= unique(split_proto_catchments/jointo), DialogData= "ipoly", DialogType = "map" {
-						attribute<ipoint> ipoly (polygon):= partitioned_union_polygon(split_proto_catchments/Geometry, split_proto_catchments/pc_id);
-						attribute<Geometries/WorldMollweide> poly (polygon):= ipoly[Geography/LambertEA];
-						attribute<float32>			   sqkm:= area(poly, float64)[float32] / (1000f * 1000f);
-						attribute<bool>	fua:= any(split_proto_catchments/fua, split_proto_catchments/pc_id);
-						attribute<bool> exclv:= all(split_proto_catchments/exclave, split_proto_catchments/pc_id);
-						attribute<uint32> org_dep:= modus_weighted(split_proto_catchments/org_dep, split_proto_catchments/Pop, split_proto_catchments/pc_id);
+					unit<uint32> proto_catchments := unique(split_proto_catchments/jointo), DialogData= "ipoly", DialogType = "map" 
+					{
+						attribute<ipoint>         ipoly (poly) := partitioned_union_polygon(split_proto_catchments/Geometry, split_proto_catchments/pc_id);
+						attribute<WorldMollweide> poly  (poly) := ipoly[Geography/LambertEA];
+						attribute<float32>        sqkm         := area(poly, float64)[float32] / (1000f * 1000f);
+						attribute<bool>	          fua          := any(split_proto_catchments/fua, split_proto_catchments/pc_id);
+						attribute<bool>           exclv        := all(split_proto_catchments/exclave, split_proto_catchments/pc_id);
+						attribute<uint32>         org_dep      := modus_weighted(split_proto_catchments/org_dep, split_proto_catchments/Pop, split_proto_catchments/pc_id);
 					}
 				}
 			}
-			attribute<cleaned_catchments> cs_id (Add_Unconnected_Grids/all_grids):= point_in_polygon(Add_Unconnected_Grids/all_grids/Geometry_mw, cleaned_catchments/poly);
-			attribute<cleaned_catchments> Catchment_Id (Country_Settlements):= MakeDefined(invert(cleaned_catchments/Values), point_in_polygon(Country_Settlements/Geometry_mw, cleaned_catchments/poly));
-			unit<uint32> cleaned_catchments:= union_unit(results_choice/proto_catchments, cleanup_catchments/init/fua_catchments ) {
-				attribute<Country_Settlements>	Values:= union_data(., results_choice/proto_catchments/Values, cleanup_catchments/init/fua_catchments/Values);
-				attribute<WorldMollweide> 	poly (polygon):= union_data(., results_choice/proto_catchments/poly, cleanup_catchments/init/fua_catchments/poly);
-				attribute<bool>				fua:= union_data(., results_choice/proto_catchments/fua, cleanup_catchments/init/fua_catchments/fua);
-				//attribute<bool>					exclv:= union_data(., results_choice/proto_catchments/exclv, const(false, cleanup_catchments/init/fua_catchments, bool));
-				attribute<Country_Settlements> biggest_settlement:= MakeDefined(Values, max_index(Country_Settlements/Pop, Catchment_Id));
+			attribute<cleaned_catchments> cs_id (Add_Unconnected_Grids/all_grids) := point_in_polygon(Add_Unconnected_Grids/all_grids/Geometry_mw, cleaned_catchments/poly);
+			attribute<cleaned_catchments> Catchment_Id      (Country_Settlements) := MakeDefined(invert(cleaned_catchments/Values), point_in_polygon(Country_Settlements/Geometry_mw, cleaned_catchments/poly));
+			
+			unit<uint32> cleaned_catchments := union_unit(results_choice/proto_catchments, cleanup_catchments/init/fua_catchments ) 
+			{
+				attribute<Country_Settlements>  Values             := union_data(., results_choice/proto_catchments/Values, cleanup_catchments/init/fua_catchments/Values);
+				attribute<WorldMollweide>       poly (poly)        := union_data(., results_choice/proto_catchments/poly, cleanup_catchments/init/fua_catchments/poly);
+				attribute<bool>                 fua                := union_data(., results_choice/proto_catchments/fua, cleanup_catchments/init/fua_catchments/fua);
+				//attribute<bool>               exclv              := union_data(., results_choice/proto_catchments/exclv, const(false, cleanup_catchments/init/fua_catchments, bool));
+				attribute<Country_Settlements>  biggest_settlement := MakeDefined(Values, max_index(Country_Settlements/Pop, Catchment_Id));
 			}
+			
 			parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Catchments/'+thresholds/name[inThreshold]+'_pop'+string(minPop / 1000f)+'/'+Continent_Name+'/'+inCountries/ZoneId[inCountry];
 			
-			unit<uint32> all_catchments: expr = "cleaned_catchments", DialogData = "poly", DialogType = "map", StorageName = "= filepath+'.dbf'" {
-				attribute<WorldMollweide>	poly (polygon): expr = "cleaned_catchments/poly", StorageName = "= filepath+'.shp'";
-				attribute<float32>				Pop:			expr = "sum(Add_Unconnected_Grids/all_grids/Pop, cs_id)";
-				attribute<uint8>				fua:			expr = "uint8(cleaned_catchments/fua)";
-				//attribute<uint8>				exclv:			expr = "uint8(cleaned_catchments/exclv)";
-				//attribute<string> 				Name: 			expr = "exclv < 1b ? MakeDefined(Settlements/LabelText[biggest_settlement], 'None') : 'Exclaves '+region_unit/ZoneId[inRegion]";
-				attribute<uint32>				SettId:			expr = "biggest_settlement";
-				//attribute<string> 				category:		expr = "MakeDefined(Settlements/category[biggest_settlement], 'None')";
-				//attribute<float32>		  		med_t:= 		rth_element(tt, 0.5f, dependent)[Values];
-				//attribute<float32>				max_t:= 		max(tt, dependent)[Values];
-				//attribute<float32>				mw_t:= 			(sum(OriginPoints/Pop * tt, dependent) / sum(OriginPoints/Pop, dependent))[Values];
+			unit<uint32> all_catchments:= cleaned_catchments
+			, DialogData = "poly"
+			, DialogType = "map"
+			, StorageName = "= filepath+'.dbf'" 
+			{
+				attribute<WorldMollweide>  poly (poly) := cleaned_catchments/poly, StorageName = "= filepath+'.shp'";
+				attribute<float32>         Pop         := sum(Add_Unconnected_Grids/all_grids/Pop, cs_id);
+				attribute<uint8>           fua         := uint8(cleaned_catchments/fua);
+				//attribute<uint8>         exclv:= "uint8(cleaned_catchments/exclv);
+				//attribute<string>        Name:= "exclv < 1b ? MakeDefined(Settlements/LabelText[biggest_settlement], 'None') : 'Exclaves '+region_unit/ZoneId[inRegion];
+				attribute<uint32>          SettId      := biggest_settlement;
+				//attribute<string>        category:= MakeDefined(Settlements/category[biggest_settlement], 'None');
+				//attribute<float32>       med_t:= rth_element(tt, 0.5f, dependent)[Values];
+				//attribute<float32>       max_t:= max(tt, dependent)[Values];
+				//attribute<float32>       mw_t:= (sum(OriginPoints/Pop * tt, dependent) / sum(OriginPoints/Pop, dependent))[Values];
 			}
-			unit<uint32> all_catchments_readonly: StorageName = "= propvalue(all_catchments/poly, 'StorageName')", StorageType = "gdal.vect", StorageReadOnly = "True" {
-				attribute<WorldMollweide> 		Geometry (polygon);
-				attribute<Country_Settlements> 	settRef:= SettId[Country_Settlements];
-				attribute<FinalNodeSet>			NodeRef:= Country_Settlements/NodeId[settRef]; //, Country_Connected_Grids/NodeId[connect(Country_Connected_Grids/Geometry_mw, centroid_or_mid(Geometry))]);
-				attribute<string>				Label:= Country_Settlements/Label[settRef];
+			unit<uint32> all_catchments_readonly 
+			: StorageName = "= propvalue(all_catchments/poly, 'StorageName')"
+			, StorageType = "gdal.vect"
+			, StorageReadOnly = "True" 
+			{
+				attribute<WorldMollweide>       Geometry (poly);
+				attribute<Country_Settlements>  settRef         := SettId[Country_Settlements];
+				attribute<FinalNodeSet>         NodeRef         := Country_Settlements/NodeId[settRef]; //, Country_Connected_Grids/NodeId[connect(Country_Connected_Grids/Geometry_mw, centroid_or_mid(Geometry))]);
+				attribute<string>               Label           := Country_Settlements/Label[settRef];
 			}
 		}
 	}
+	
 	Template Settlement_Hierarchy_T
 	{
 		parameter<string> Continent_name;
@@ -342,7 +436,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			attribute<FinalNodeSet>    NodeId      := Org_NodeId[org_rel];
 			attribute<float32>         population  := Org/population[org_rel];
 			attribute<Countries>       Country_rel := Org/Country_rel[org_rel];
-			attribute<string>		   LabelText   := Org/Label[org_rel];
+			attribute<string>          Label       := Org/Label[org_rel];
 		}
 		
 		unit<uint64> OD_matrix :=
@@ -386,11 +480,16 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			attribute<uint32>         Maxl        := = 'max_elem('+AsItemList('(biggest_centre/'+thresholds/name+' * uint32('+string(thresholds/num)+'))')+')';
 		}
 			
-			unit<uint32> Hierarchies_ReadOnly: storagename = "= propvalue(Hierarchies_write/point, 'StorageName')", StorageReadOnly = "true", storagetype = "gdal.vect", dialogdata = "Geometry", DialogType = "map" {
-				attribute<BaseProjection> Geometry;
-				attribute<Connected_Settlements> Connected_Settlements_rel:= rlookup(LabelText, Connected_Settlements/LabelText);
-				attribute<FinalNodeSet> 		 NodeId:= Connected_Settlements/NodeId[Connected_Settlements_rel];
-				attribute<string>			     Label:= LabelText; // drop in later stage as Labels are stored since a previous revision.
-			}	
+		unit<uint32> Hierarchies_ReadOnly 
+		: storagename = "= propvalue(Hierarchies_write, 'StorageName')"
+		, StorageReadOnly = "true"
+		, storagetype = "gdal.vect"
+		, StorageReadOnly = "true"
+		{
+			attribute<BaseProjection>        point : storagename = "= propvalue(Hierarchies_write/point, 'StorageName')", StorageReadOnly = "true";
+			attribute<Connected_Settlements> Connected_Settlements_rel := rlookup(Label, Connected_Settlements/Label);
+			attribute<FinalNodeSet>          NodeId                    := Connected_Settlements/NodeId[Connected_Settlements_rel];
+			attribute<string>                Label; //  := LabelText; // drop in later stage as Labels are stored since a previous revision.
+		}
 	}
 }
