@@ -48,37 +48,65 @@ container Templates: Using = "Units;Classifications;geometries"
 		container CreateInitialWorkingNetwork
 		{
 			unit<uint32> Roads := arc2segm(RoadDomain0/geometry)
+			, DialogData = "geometry_wm"
+			, DialogType = "map"
 			{
-				attribute<km_hr>              KPH                  := sequence_rel->KPH;
-				attribute<bool>               IsOneDirection       := sequence_rel->IsOneDirection;
-				attribute<bool>               Connectable          := sequence_rel->Connectable;
-				attribute<WebMercator>        point_wm       := convert(point(PointCol(point), PointRow(point))[BaseProjection], WebMercator); // convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WorldMollweide);
-				attribute<WebMercator>        nextpoint_wm   := convert(point(PointCol(nextpoint), PointRow(nextpoint))[BaseProjection], WebMercator);
+				attribute<km_hr>               KPH                 := sequence_rel -> KPH;
+				attribute<bool>                IsOneDirection      := sequence_rel -> IsOneDirection;
+				attribute<bool>                Connectable         := sequence_rel -> Connectable;
+				attribute<int32>               z_order             := sequence_rel -> z_order;
+				attribute<string>              label               := 'Link_'+string(id(.));
 				
-				unit<uint32> PointSet := union_unit(., .)
+				// Correct network after arc2segm for incorrectly connected unequal z-orders.
+				attribute<Uq_Z_set>            Uq_Z_set_rel        := rlookup(z_order, Uq_Z_set/values);
+				attribute<XYZ_set>             F1_XYZ_rel          := combine_data(XYZ_set, F1, Uq_Z_set_rel); //combined z-order of start node
+				attribute<XYZ_set>             F2_XYZ_rel          := combine_data(XYZ_set, F2, Uq_Z_set_rel); //combined z-order of end node
+				
+				unit<uint32> Uq_XYZ_set   := unique(PointSet/XYZ_rel)
 				{
-					attribute<BaseProjection>   geometry     := union_data(., point, nextpoint);
-					attribute<WebMercator>      geometry_wm  := union_data(., point_wm, nextpoint_wm);
+					attribute<string>          label               := XYZ_set/label[XYZ_rel];
+					attribute<XYZ_set>         XYZ_rel             := values;
+					attribute<Uq_XY_set>       Uq_XY_rel           := XYZ_set/Uq_XY_rel[XYZ_rel];
+					attribute<Uq_Z_set>        Uq_Z_rel            := XYZ_set/Uq_Z_rel[XYZ_rel];
 				}
-				unit<uint32> UqGeomPointSet := unique(PointSet/geometry_wm)
-				{ 
-					attribute<BaseProjection>   geometry_LL  := PointSet/geometry[pointrel]; //
-					attribute<WebMercator>      geometry_wm  := values;
-					attribute<PointSet>         pointrel     := rlookup(geometry_wm, PointSet/geometry_wm);
-					
+				unit<uint32> XYZ_set      := combine(Uq_XY_set, Uq_Z_set)
+				{
+					attribute<string>          label               := Uq_XY_set/label[Uq_XY_rel] + '_' + Uq_Z_set/label[Uq_Z_rel];
+					attribute<Uq_XY_set>       Uq_XY_rel           := first_rel;
+					attribute<Uq_Z_set>        Uq_Z_rel            := second_rel;
 				}
-				attribute<UqGeomPointSet> F1 := rlookup(point_wm, UqGeomPointSet/geometry_wm);
-				attribute<UqGeomPointSet> F2 := rlookup(nextpoint_wm, UqGeomPointSet/geometry_wm);
+				unit<uint32> Uq_Z_set     := unique(z_order)
+				{
+					attribute<string> label := 'Z_'+string(values);
+				}
 				
-				// for checking and visualisation only
-				container Connectiveness := Templates/Check_Connectiveness_T_seldomain(.,UqGeomPointSet, F1, F2, RoadSelDomain);
-				attribute<BaseProjection>  geometry    (arc) := points2sequence(PointSet/geometry, convert(id(PointSet) % #., .));
-				attribute<WebMercator>     geometry_wm (arc) := points2sequence(PointSet/geometry_wm, convert(id(PointSet) % #., .));
+				unit<uint32> PointSet     := union_unit(., .)
+				{
+					attribute<BaseProjection>  geometry     := union_data(., point, nextpoint);
+					attribute<WebMercator>     geometry_wm  := union_data(., point_wm, nextpoint_wm);
+					attribute<XYZ_set>         XYZ_rel      := union_data(., F1_XYZ_rel, F2_XYZ_rel);
+				}
+				
+				unit<uint32> Uq_XY_set := unique(PointSet/geometry_wm) //needed for connectiveness tests
+				, DialogData = "geometry_wm"
+				, DialogType = "map"
+				{ 
+					attribute<string>          label               := 'XY_'+string(id(.));
+					attribute<BaseProjection>  geometry_LL         := PointSet/geometry[pointrel];//needed for connectiveness tests
+					attribute<WebMercator>     geometry_wm         := values;
+					attribute<PointSet>        pointrel            := rlookup(geometry_wm, PointSet/geometry_wm);//needed for connectiveness tests
+				}
+				
+				attribute<WebMercator>         point_wm            := convert(point(PointCol(point), PointRow(point))[BaseProjection], WebMercator); // convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WorldMollweide);
+				attribute<WebMercator>         nextpoint_wm        := convert(point(PointCol(nextpoint), PointRow(nextpoint))[BaseProjection], WebMercator);
+				attribute<Uq_XY_set>           F1                  := rlookup(point_wm, Uq_XY_set/geometry_wm); //needed for connectiveness tests
+				attribute<Uq_XY_set>           F2                  := rlookup(nextpoint_wm, Uq_XY_set/geometry_wm);  //needed for connectiveness tests
+				container                      Connectiveness      := Templates/Check_Connectiveness_T_seldomain(.,Uq_XY_set, F1, F2, RoadSelDomain);
+				attribute<BaseProjection>      geometry      (arc) := points2sequence(PointSet/geometry, convert(id(PointSet) % #., .));
+				attribute<WebMercator>         geometry_wm   (arc) := points2sequence(PointSet/geometry_wm, convert(id(PointSet) % #., .));
 			}
 			
-			unit<uint32> Roads_Connected := select_with_attr_by_cond(Roads, Roads/Connectiveness/IsVerbonden)
-			{
-			}
+			unit<uint32> Roads_Connected := select_with_attr_by_cond(Roads, Roads/Connectiveness/IsVerbonden);
 		
 			unit<uint32> LinkSet := connect(Roads_Connected/geometry_wm, uq_OD_points/geometry_wm, (10000d^2d))
 			{

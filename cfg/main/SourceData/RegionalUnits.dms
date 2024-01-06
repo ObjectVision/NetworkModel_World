@@ -70,9 +70,49 @@ container RegionalUnits : using = "geometries"
 	, StorageReadOnly = "true"
 	{
 		attribute<wgs84>            Geometry (poly);
+		
 		attribute<store_Countries>  store_countries_rel  := rlookup(Country, store_Countries/values);
 		attribute<Continents>       continents_rel := rlookup(AsItemName(continent_edit), Continents/name);
 		attribute<string>           continent_edit := continent == 'Australia' || continent == 'Oceania' ? 'Australia_Oceania' : continent;
+	}
+	
+	unit<uint32> test_sub := select_with_org_rel(Local_Units/Name_0 == 'Netherlands')
+	{
+		attribute<wgs84>             geometry_WGS84          (poly) := org_rel -> geometry;
+		attribute<dpoint>            geometry_WGS84_Reversed (poly) := Convert_wgs84_xy_to_yx/geometry_yx;
+		
+		attribute<WorldMollweide>    geometry_MW_14_9_0      (poly) := convert(geometry_WGS84, WorldMollweide);
+		attribute<WebMercator>       geometry_WM_14_9_0      (poly) := convert(geometry_WGS84, WebMercator);
+		attribute<Rdc>               geometry_RDC_14_9_0     (poly) := convert(geometry_WGS84, RDC);
+		
+		attribute<WorldMollweide>    geometry_MW_workaround  (poly) := convert(geometry_WGS84_Reversed, WorldMollweide);
+		attribute<WebMercator>       geometry_WM_workaround  (poly) := convert(geometry_WGS84_Reversed, WebMercator);
+		attribute<Rdc>               geometry_RDC_workaround (poly) := convert(geometry_WGS84_Reversed, RDC);
+		
+		attribute<Rdc>               geometry_RDC_operator   (poly) := LatLongWgs842RD(geometry_WGS84, RDC);
+		
+		attribute<float64>           area_wgs                       := area(geometry_WGS84, float64);
+		attribute<float64>           area_wgs_reversed              := area(geometry_WGS84_Reversed, float64);
+		attribute<float64>           area_mw_14_9_0                 := area(geometry_MW_14_9_0, float64);
+		attribute<float64>           area_wm_14_9_0                 := area(geometry_WM_14_9_0, float64);
+		attribute<float64>           area_rdc_14_9_0                := area(geometry_RDC_14_9_0, float64);
+		attribute<float64>           area_mw_workaround             := area(geometry_MW_workaround, float64);
+		attribute<float64>           area_wm_workaround             := area(geometry_WM_workaround, float64);
+		attribute<float64>           area_rdc_workaround            := area(geometry_RDC_workaround, float64);
+		attribute<float64>           area_rdc_operator              := area(geometry_RDC_operator, float64);
+	
+		container Convert_wgs84_xy_to_yx : DisableStorage = "true"
+		{
+			unit<uint32> border_points := sequence2points(geometry_WGS84)
+			{
+				attribute<wgs84> point_yx := Point(PointCol(point), PointRow(point), wgs84);
+			}
+			unit<uint32> Country_ui32  := range(uint32, 0, uint32(#..))
+			{
+				attribute<wgs84> Geometry_yx (poly) := points2sequence_pso(border_points/point_yx, border_points/sequence_rel[Country_ui32], border_points/ordinal);
+			}
+			attribute<wgs84> Geometry_yx (poly, ..) := union_data(.., Country_ui32/Geometry_yx);
+		}
 	}
 	
 	unit<uint8> Continents := Classifications/Continents

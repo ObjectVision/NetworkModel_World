@@ -148,8 +148,8 @@ container Functional_Rural_Areas: using = "Units;Geometries;SourceData/RegionalU
 		Container ResultsByVariant:= for_each_ne(variants/LabelText, 'genResultsByVariant('+string(id(variants))+')') {
 			container button {
 				parameter<bool> runAll:= True, explicitsuppliers = "= AsList(variants/LabelText+'/storeAreas/AreaCll',';')";
-				parameter<bool> run_mint_variants:= True, explicitsuppliers = "= AsList(variants/min_time_h > 0f ? variants/LabelText+'/storeAreas/AreaCll' : '',';')";
-				parameter<bool> run_24052023_variants:= True, explicitsuppliers = "= variants/LabelText[12]+'/storeAreas/AreaCll;' + variants/LabelText[13]+'/storeAreas/AreaCll;'";
+				//parameter<bool> run_mint_variants:= True, explicitsuppliers = "= AsList(variants/min_time_h > 0f ? variants/LabelText+'/storeAreas/AreaCll' : '',';')";
+				//parameter<bool> run_24052023_variants:= True, explicitsuppliers = "= variants/LabelText[12]+'/storeAreas/AreaCll;' + variants/LabelText[13]+'/storeAreas/AreaCll;'";
 			}
 		}
 		

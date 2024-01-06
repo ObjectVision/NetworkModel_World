@@ -5,9 +5,11 @@ container Geometries : using = "units"
 	
 	#include <wms_layer_latlong.dms>
 	#include <tms_layer_osm_webmercator.dms>
+	#include <ngr_layer.dms>
 	
 	unit<dpoint> WorldMollweide    : SpatialReference = "ESRI:54009";
 	unit<dpoint> WebMercator       : SpatialReference = "EPSG:3857",   DialogData = "tms_layer_osm_webmercator", Label = "WebMercator";
+	unit<dpoint> RDC               : DialogData = "ngr_layer", SpatialReference = "EPSG:28992";
 	
 	unit<dpoint> WGS84 : SpatialReference = "EPSG:4326", DialogData = "wms_layer_latlong"
 	{
