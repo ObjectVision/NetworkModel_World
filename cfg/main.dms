@@ -2,11 +2,10 @@ container NetworkModel_World
 { 
 	container MakeUnlinkedData
 	{
-		
-		parameter<string> Create_LandCells           := 'Ready', ExplicitSuppliers = "/SourceData/population/store_LandCells";
-		parameter<string> Create_SettlementCentroids := 'Ready', ExplicitSuppliers = "/SourceData/Settlements/CalcCentroids/Generate";
-		parameter<string> Create_Countries           := 'Ready', ExplicitSuppliers = "/SourceData/RegionalUnits/store_Countries";
-		parameter<string> Create_OSM_Continents_fss  := 'Ready', ExplicitSuppliers = "/SourceData/Infrastructure/OSM/Per_OSM_Continent/Generate_all";
+		parameter<string> s1_Create_Countries           := 'Ready', ExplicitSuppliers = "/SourceData/RegionalUnits/store_Countries;/SourceData/RegionalUnits/store_sep_units";
+		parameter<string> s2_Create_LandCells           := 'Ready', ExplicitSuppliers = "/SourceData/population/store_LandCells";
+		parameter<string> s3_Create_SettlementCentroids := 'Ready', ExplicitSuppliers = "/SourceData/Settlements/CalcCentroids/Generate";
+		parameter<string> s4_Create_OSM_Continents_fss  := 'Ready', ExplicitSuppliers = "/SourceData/Infrastructure/OSM/Per_OSM_Continent/Generate_all";
 		
 		// parameter<string> Create_InitialLinkSet := 'Ready', ExplicitSuppliers = "/NetworkSetup/Base_Analysis/NetwerkSpec/CreateInitialWorkingNetwork/LinkSet_Write";
 		// parameter<string> Create_FinalNodeSet   := 'Ready', ExplicitSuppliers = "/NetworkSetup/Base_Analysis/NetwerkSpec/CreateMoreEfficientNetwork/FinalNodeSet_Write";
