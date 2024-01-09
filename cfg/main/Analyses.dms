@@ -97,7 +97,11 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			for_each_ne(
 				inCountries/ZoneId
 				, 'Create_Country_Catchments_T('+string(id(inCountries))+')'
-			);
+			) {
+			container gen {
+				attribute<bool> button (inCountries):= ='union_data(inCountries, '+asitemlist('Country_Catchments/'+inCountries/ZoneId+'/store_catchment')+')';
+			}
+		}
 		
 		Template Create_Country_Catchments_T 
 		{
@@ -387,6 +391,8 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			}
 			
 			parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Catchments/'+thresholds/name[inThreshold]+'_pop'+string(minPop / 1000f)+'/'+Continent_Name+'/'+inCountries/ZoneId[inCountry];
+			
+			parameter<bool> store_catchment:= true, ExplicitSuppliers = "all_catchments;";
 			
 			unit<uint32> all_catchments:= cleaned_catchments
 			, DialogData = "poly"
