@@ -68,16 +68,16 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 		
 		unit<uint32> sep_units:= ='select_with_attr_by_cond(inCountry_Sep_Units, inCountry_Sep_Units/Continents_rel == Continents/v/'+Continent_name+')' 
 		{
-			attribute<string> 		ZoneId		  		:= ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/ZoneId)';
-			attribute<WGS84>  		Geometry (poly) 	:= ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/Geometry_LL)';
-			attribute<inCountries>	allcountries_rel	:= ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/country_rel)';
-			attribute<Countries>	country_rel			:= rlookup(allcountries_rel, Countries/Nr_OrgEntity);
-			attribute<inCountry_Sep_Units>  Nr_OrgEntity    := ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', id(inCountry_Sep_Units))';
+			attribute<string>               ZoneId              := ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/ZoneId)';
+			attribute<WGS84>                Geometry (poly)     := ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/Geometry_LL)';
+			attribute<inCountries>          allcountries_rel    := ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/country_rel)';
+			attribute<Countries>            country_rel         := rlookup(allcountries_rel, Countries/Nr_OrgEntity);
+			attribute<inCountry_Sep_Units>  Nr_OrgEntity        := ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', id(inCountry_Sep_Units))';
 		}
 		
 		unit<uint32> sep_units_WM := split_polygon(Countries/iGeom_WM) 
 		{
-			unit<uint32>           border_points      := sequence2points(geometry) 
+			unit<uint32> border_points := sequence2points(geometry) 
 			{
 				attribute<WebMercator> points_div := (point[dpoint] / point(100d, 100d, dpoint))[WebMercator];
 			}

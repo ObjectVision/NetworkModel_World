@@ -168,7 +168,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 			attribute<big_raster>     org_rel              := collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), id(big_raster));
 			attribute<Countries>      country_rel          := collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/country_rel);
 			attribute<float64>        population           := collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/GridData);
-			attribute<Sep_units>	  sep_unit_rel		   := point_in_polygon(Geometry, sep_units/Geometry_LL);
+			attribute<Sep_units>      sep_unit_rel         := point_in_polygon(Geometry, sep_units/Geometry_LL);
 			attribute<WorldMollweide> org_rel_to_mollweide := convert(org_rel, WorldMollweide);
 			attribute<WGS84>          latlon_point         := convert(org_rel_to_mollweide, WGS84);
 			attribute<WGS84>          latlon_point_swapped := point(PointCol(latlon_point), PointRow(latlon_point), WGS84);
@@ -178,8 +178,8 @@ container SourceData: Using = "Units;Classifications;geometries"
 		unit<uint64> store_LandCells := sel_LandCells, storagename = "= FileName+'.fss'" 
 		{
 			attribute<big_raster>     org_rel              := sel_LandCells/org_rel;
-			attribute<Countries>	  country_rel		   := sel_LandCells/country_rel;
-			attribute<Sep_units>	  sep_unit_rel		   := sel_LandCells/sep_unit_rel;
+			attribute<Countries>      country_rel          := sel_LandCells/country_rel;
+			attribute<Sep_units>      sep_unit_rel         := sel_LandCells/sep_unit_rel;
 			attribute<float64>        population           := sel_LandCells/population;
 			attribute<WGS84>          geometry             := sel_LandCells/geometry;
 		}	

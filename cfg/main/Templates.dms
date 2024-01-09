@@ -58,6 +58,7 @@ container Templates: Using = "Units;Classifications;geometries"
 				attribute<string>              label               := 'Link_'+string(id(.));
 				
 				// Correct network after arc2segm for incorrectly connected unequal z-orders.
+				// Is this necessary?
 				attribute<Uq_Z_set>            Uq_Z_set_rel        := rlookup(z_order, Uq_Z_set/values);
 				attribute<XYZ_set>             F1_XYZ_rel          := combine_data(XYZ_set, F1, Uq_Z_set_rel); //combined z-order of start node
 				attribute<XYZ_set>             F2_XYZ_rel          := combine_data(XYZ_set, F2, Uq_Z_set_rel); //combined z-order of end node
@@ -69,22 +70,22 @@ container Templates: Using = "Units;Classifications;geometries"
 					attribute<Uq_XY_set>       Uq_XY_rel           := XYZ_set/Uq_XY_rel[XYZ_rel];
 					attribute<Uq_Z_set>        Uq_Z_rel            := XYZ_set/Uq_Z_rel[XYZ_rel];
 				}
-				unit<uint32> XYZ_set      := combine(Uq_XY_set, Uq_Z_set)
+				unit<uint32> XYZ_set      := combine_unit(Uq_XY_set, Uq_Z_set)
 				{
-					attribute<string>          label               := Uq_XY_set/label[Uq_XY_rel] + '_' + Uq_Z_set/label[Uq_Z_rel];
-					attribute<Uq_XY_set>       Uq_XY_rel           := first_rel;
-					attribute<Uq_Z_set>        Uq_Z_rel            := second_rel;
+					// attribute<string>          label               := Uq_XY_set/label[Uq_XY_rel] + '_' + Uq_Z_set/label[Uq_Z_rel];
+					// attribute<Uq_XY_set>       Uq_XY_rel           := first_rel;
+					// attribute<Uq_Z_set>        Uq_Z_rel            := second_rel;
 				}
 				unit<uint32> Uq_Z_set     := unique(z_order)
 				{
-					attribute<string> label := 'Z_'+string(values);
+					attribute<string>          label               := 'Z_'+string(values);
 				}
 				
 				unit<uint32> PointSet     := union_unit(., .)
 				{
-					attribute<BaseProjection>  geometry     := union_data(., point, nextpoint);
-					attribute<WebMercator>     geometry_wm  := union_data(., point_wm, nextpoint_wm);
-					attribute<XYZ_set>         XYZ_rel      := union_data(., F1_XYZ_rel, F2_XYZ_rel);
+					attribute<BaseProjection>  geometry            := union_data(., point, nextpoint);
+					attribute<WebMercator>     geometry_wm         := union_data(., point_wm, nextpoint_wm);
+					attribute<XYZ_set>         XYZ_rel             := union_data(., F1_XYZ_rel, F2_XYZ_rel);
 				}
 				
 				unit<uint32> Uq_XY_set := unique(PointSet/geometry_wm) //needed for connectiveness tests

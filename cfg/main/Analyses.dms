@@ -65,7 +65,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		attribute<BaseProjection>  inGrids_centroid_wgs_yx (inGrids) := point(inGrids_centroid_wgs_y, inGrids_centroid_wgs_x, BaseProjection);
 		attribute<WebMercator>     inGrids_centroid_wm     (inGrids) := convert(inGrids_centroid_wgs_yx, WebMercator);
 		
-		attribute<WebMercator>     inGrids_centroid_wm_old (inGrids) := convert(point(PointCol(inGrids/centroid), PointRow(inGrids/centroid))[BaseProjection], WebMercator);
+		attribute<WebMercator>     inGrids_centroid_wm_old (inGrids) := convert(point(PointCol(inGrids_centroid_wgs), PointRow(inGrids_centroid_wgs))[BaseProjection], WebMercator);
 		
 		
 		
