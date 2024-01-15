@@ -33,6 +33,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		);
 	
 	#include<Functional_Rural_Areas.dms>
+	#include<Collect_Results.dms>
 	
 	Template Prepare_Catchments_T 
 	{
@@ -420,6 +421,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				attribute<FinalNodeSet>         NodeRef         := Country_Settlements/NodeId[settRef]; //, Country_Connected_Grids/NodeId[connect(Country_Connected_Grids/Geometry_mw, centroid_or_mid(Geometry))]);
 				attribute<string>               Label           := Country_Settlements/Label[settRef];
 			}
+			parameter<string> result_available:= strcount(ExistingFile('X_X_X_X',(filepath+'.shp')), 'X_X_X_X') < 1; 
 		}
 	}
 	

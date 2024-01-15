@@ -1,0 +1,76 @@
+container collect_results: using = "Units;Geometries;SourceData/RegionalUnits;" {
+	
+	parameter<string> xx:= 'X_X_X_X';
+	
+	container catchment_areas {
+	
+		parameter<thresholds> inThreshold:= Analyses/Create_Centres_Catchments/Africa/inThreshold;
+		parameter<float32>	  minPop:= Analyses/Create_Centres_Catchments/Africa/minPop;
+		parameter<string> 	  pathbit:= '%LocalDataProjDir%/Settlement_Catchments/'+thresholds/name[inThreshold]+'_pop'+string(minPop / 1000f);
+		unit<uint32> all_countries:= countries {
+			
+			attribute<string> reference:= MakeDefined(pathbit+'/'+Continents/Name[continents_rel]+'/'+ZoneId+'.shp', xx); 
+			attribute<bool>	results_available:= ='union_data(.,'+asitemlist('checkfiles/'+ZoneId)+')';
+			
+			container checkfiles:= for_each_nedv(ZoneId, 'strcount(ExistingFile(xx, reference['+string(id(all_countries))+']), xx) < 1', void, bool);
+		
+		}
+		unit<uint32> countries_with_results:= subset(all_countries/results_available) {
+			attribute<string> ZoneId:= all_countries/ZoneId[nr_orgentity];
+			attribute<string> filepath:= all_countries/reference[nr_orgentity];
+		}
+		container loadfiles:= for_each_ne(countries_with_results/ZoneId, 'load_polygons('+quote(countries_with_results/filepath)+')') {
+			container combined_storage {
+				unit<uint32> all_catchments:= ='union_unit('+asitemlist(countries_with_results/ZoneId+'/inFile')+')', storagename = "= pathbit+'/mozaik/all_ran.dbf'" {
+					attribute<WorldMollweide> 	Geometry (poly):= ='union_data(.,'+asitemlist(countries_with_results/ZoneId+'/inFile/Geometry')+')', storagename = "= pathbit+'/mozaik/all_ran.shp'";
+					attribute<float32> 			pop:= ='union_data(.,'+asitemlist('float32('+countries_with_results/ZoneId+'/inFile/pop)')+')';
+					attribute<string>			Country:= ='union_data(.,'+asitemlist('const('+quote(countries_with_results/ZoneId)+', '+countries_with_results/ZoneId+'/inFile, string)')+')';
+				}
+			}
+		}	
+	}
+	container functional_areas: using="Analyses/Functional_Rural_Areas;" {
+		
+		unit<uint32> variants:= Analyses/Functional_Rural_Areas/variants;
+		
+		container areas_per_variant:= for_each_ne(variants/LabelText, 'results_per_variant('+string(id(variants))+')');
+		
+		Template results_per_variant {
+			parameter<variants> inVariant;
+			parameter<string> inThreshold:= Analyses/thresholds/name[catchment_areas/inThreshold];
+			
+			parameter<string> 	  pathbit:= '%LocalDataProjDir%/Functional_Rural_Areas/Base_'+inThreshold+'/'+variants/LabelText[inVariant];
+			unit<uint32> all_countries:= countries {
+				
+				attribute<string> reference:= MakeDefined(pathbit+'/'+Continents/Name[continents_rel]+'/'+ZoneId+'.shp', xx); 
+				attribute<bool>	results_available:= ='union_data(.,'+asitemlist('checkfiles/'+ZoneId)+')';
+				
+				container checkfiles:= for_each_nedv(ZoneId, 'strcount(ExistingFile(xx, reference['+string(id(all_countries))+']), xx) < 1', void, bool);
+			
+			}
+			unit<uint32> countries_with_results:= subset(all_countries/results_available) {
+				attribute<string> ZoneId:= all_countries/ZoneId[nr_orgentity];
+				attribute<string> filepath:= all_countries/reference[nr_orgentity];
+			}
+			container loadfiles:= for_each_ne(countries_with_results/ZoneId, 'load_polygons('+quote(countries_with_results/filepath)+')') {
+				container combined_storage {
+					unit<uint32> all_catchments:= ='union_unit('+asitemlist(countries_with_results/ZoneId+'/inFile')+')', storagename = "= pathbit+'/mozaik/all_ran.dbf'" {
+						attribute<WorldMollweide> 	Geometry (poly):= ='union_data(.,'+asitemlist(countries_with_results/ZoneId+'/inFile/Geometry')+')', storagename = "= pathbit+'/mozaik/all_ran.shp'";
+						attribute<float32> 			pop:= ='union_data(.,'+asitemlist('float32('+countries_with_results/ZoneId+'/inFile/pop)')+')';
+						attribute<string>			Country:= ='union_data(.,'+asitemlist('const('+quote(countries_with_results/ZoneId)+', '+countries_with_results/ZoneId+'/inFile, string)')+')';
+						attribute<string>			Name:= ='union_data(.,'+asitemlist('('+countries_with_results/ZoneId+'/inFile/Name)')+')';
+						attribute<uint32>			Def:= ='union_data(.,'+asitemlist('uint32('+countries_with_results/ZoneId+'/inFile/Def)')+')';
+						attribute<uint32>			Iter:= ='union_data(.,'+asitemlist('uint32('+countries_with_results/ZoneId+'/inFile/Iter)')+')';
+					}
+				}
+			}	
+		}
+	}
+	Template load_polygons {
+		parameter<string> inPath;
+		unit<uint32> inFile: storagename = "= inPath", storagereadonly = "True", storagetype = "gdal.vect" {
+			attribute<WorldMollweide> Geometry (poly);
+		}
+	}
+
+}
