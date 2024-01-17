@@ -37,8 +37,10 @@ container Templates: Using = "Units;Classifications;geometries"
 		, DialogType = "map"
 		{ 
 			attribute<BaseProjection>               geometry       := values;
-			attribute<Geometries/WorldMollweide>    geometry_mw    := convert(point(PointCol(geometry), PointRow(geometry))[BaseProjection], Geometries/WorldMollweide);
-			attribute<WebMercator>                  geometry_wm    := convert(point(PointCol(geometry), PointRow(geometry))[BaseProjection], WebMercator);
+			// attribute<Geometries/WorldMollweide>    geometry_mw    := convert(point(PointCol(geometry), PointRow(geometry))[BaseProjection], Geometries/WorldMollweide);
+			// attribute<WebMercator>                  geometry_wm    := convert(point(PointCol(geometry), PointRow(geometry))[BaseProjection], WebMercator);
+			attribute<WorldMollweide>               geometry_mw    := convert(geometry, WorldMollweide);
+			attribute<WebMercator>                  geometry_wm    := convert(geometry, WebMercator);
 			attribute<OD_points>                    Locations_rel  := rlookup(geometry, OD_points/geometry);
 			attribute<OrgDomain>                    OrgDomain_rel  := rlookup(geometry, OrgLocations);
 			attribute<DestDomain>                   DestDomain_rel := rlookup(geometry, DestLocations);
@@ -59,33 +61,33 @@ container Templates: Using = "Units;Classifications;geometries"
 				
 				// Correct network after arc2segm for incorrectly connected unequal z-orders.
 				// Is this necessary?
-				attribute<Uq_Z_set>            Uq_Z_set_rel        := rlookup(z_order, Uq_Z_set/values);
-				attribute<XYZ_set>             F1_XYZ_rel          := combine_data(XYZ_set, F1, Uq_Z_set_rel); //combined z-order of start node
-				attribute<XYZ_set>             F2_XYZ_rel          := combine_data(XYZ_set, F2, Uq_Z_set_rel); //combined z-order of end node
+				// attribute<Uq_Z_set>            Uq_Z_set_rel        := rlookup(z_order, Uq_Z_set/values);
+				// attribute<XYZ_set>             F1_XYZ_rel          := combine_data(XYZ_set, F1, Uq_Z_set_rel); //combined z-order of start node
+				// attribute<XYZ_set>             F2_XYZ_rel          := combine_data(XYZ_set, F2, Uq_Z_set_rel); //combined z-order of end node
 				
-				unit<uint32> Uq_XYZ_set   := unique(PointSet/XYZ_rel)
-				{
-					attribute<string>          label               := XYZ_set/label[XYZ_rel];
-					attribute<XYZ_set>         XYZ_rel             := values;
-					attribute<Uq_XY_set>       Uq_XY_rel           := XYZ_set/Uq_XY_rel[XYZ_rel];
-					attribute<Uq_Z_set>        Uq_Z_rel            := XYZ_set/Uq_Z_rel[XYZ_rel];
-				}
-				unit<uint32> XYZ_set      := combine_unit(Uq_XY_set, Uq_Z_set)
-				{
+				// unit<uint32> Uq_XYZ_set   := unique(PointSet/XYZ_rel)
+				// {
+					// attribute<string>          label               := XYZ_set/label[XYZ_rel];
+					// attribute<XYZ_set>         XYZ_rel             := values;
+					// attribute<Uq_XY_set>       Uq_XY_rel           := XYZ_set/Uq_XY_rel[XYZ_rel];
+					// attribute<Uq_Z_set>        Uq_Z_rel            := XYZ_set/Uq_Z_rel[XYZ_rel];
+				// }
+				// unit<uint32> XYZ_set      := combine_unit(Uq_XY_set, Uq_Z_set)
+				// {
 					// attribute<string>          label               := Uq_XY_set/label[Uq_XY_rel] + '_' + Uq_Z_set/label[Uq_Z_rel];
 					// attribute<Uq_XY_set>       Uq_XY_rel           := first_rel;
 					// attribute<Uq_Z_set>        Uq_Z_rel            := second_rel;
-				}
-				unit<uint32> Uq_Z_set     := unique(z_order)
-				{
-					attribute<string>          label               := 'Z_'+string(values);
-				}
+				// }
+				// unit<uint32> Uq_Z_set     := unique(z_order)
+				// {
+					// attribute<string>          label               := 'Z_'+string(values);
+				// }
 				
 				unit<uint32> PointSet     := union_unit(., .)
 				{
 					attribute<BaseProjection>  geometry            := union_data(., point, nextpoint);
 					attribute<WebMercator>     geometry_wm         := union_data(., point_wm, nextpoint_wm);
-					attribute<XYZ_set>         XYZ_rel             := union_data(., F1_XYZ_rel, F2_XYZ_rel);
+					// attribute<XYZ_set>         XYZ_rel             := union_data(., F1_XYZ_rel, F2_XYZ_rel);
 				}
 				
 				unit<uint32> Uq_XY_set := unique(PointSet/geometry_wm) //needed for connectiveness tests
@@ -98,8 +100,10 @@ container Templates: Using = "Units;Classifications;geometries"
 					attribute<PointSet>        pointrel            := rlookup(geometry_wm, PointSet/geometry_wm);//needed for connectiveness tests
 				}
 				
-				attribute<WebMercator>         point_wm            := convert(point(PointCol(point), PointRow(point))[BaseProjection], WebMercator); // convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WorldMollweide);
-				attribute<WebMercator>         nextpoint_wm        := convert(point(PointCol(nextpoint), PointRow(nextpoint))[BaseProjection], WebMercator);
+				// attribute<WebMercator>         point_wm            := convert(point(PointCol(point), PointRow(point))[BaseProjection], WebMercator); // convert(point(PointCol(point), PointRow(point))[BaseProjection], Geometries/WorldMollweide);
+				// attribute<WebMercator>         nextpoint_wm        := convert(point(PointCol(nextpoint), PointRow(nextpoint))[BaseProjection], WebMercator);
+				attribute<WebMercator>         point_wm            := convert(point, WebMercator); 
+				attribute<WebMercator>         nextpoint_wm        := convert(nextpoint, WebMercator);
 				attribute<Uq_XY_set>           F1                  := rlookup(point_wm, Uq_XY_set/geometry_wm); //needed for connectiveness tests
 				attribute<Uq_XY_set>           F2                  := rlookup(nextpoint_wm, Uq_XY_set/geometry_wm);  //needed for connectiveness tests
 				container                      Connectiveness      := Templates/Check_Connectiveness_T_seldomain(.,Uq_XY_set, F1, F2, RoadSelDomain);

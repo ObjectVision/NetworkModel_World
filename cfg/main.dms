@@ -1,4 +1,4 @@
-container NetworkModel_World 
+container NetworkModel_World : IntegrityCheck = "GeoDMSVersion() >= 14.0900" //because of xy-order in coordinate conversions
 { 
 	container MakeUnlinkedData
 	{
@@ -6,10 +6,6 @@ container NetworkModel_World
 		parameter<string> s2_Create_LandCells           := 'Ready', ExplicitSuppliers = "/SourceData/population/store_LandCells";
 		parameter<string> s3_Create_SettlementCentroids := 'Ready', ExplicitSuppliers = "/SourceData/Settlements/CalcCentroids/Generate";
 		parameter<string> s4_Create_OSM_Continents_fss  := 'Ready', ExplicitSuppliers = "/SourceData/Infrastructure/OSM/Per_OSM_Continent/Generate_all";
-		
-		// parameter<string> Create_InitialLinkSet := 'Ready', ExplicitSuppliers = "/NetworkSetup/Base_Analysis/NetwerkSpec/CreateInitialWorkingNetwork/LinkSet_Write";
-		// parameter<string> Create_FinalNodeSet   := 'Ready', ExplicitSuppliers = "/NetworkSetup/Base_Analysis/NetwerkSpec/CreateMoreEfficientNetwork/FinalNodeSet_Write";
-		// parameter<string> Create_FinalLinkSet   := 'Ready', ExplicitSuppliers = "/NetworkSetup/Base_Analysis/NetwerkSpec/CreateMoreEfficientNetwork/FinalLinkSet_Write";
 		
 		container Create_InitialLinkSet_perContinent :=
 			for_each_nedv(
@@ -33,8 +29,7 @@ container NetworkModel_World
 				, void
 				, bool
 			);
-	}	
-	
+	}
 	
 	#include<ModelParameters.dms>
 	#include<units.dms>

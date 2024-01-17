@@ -24,39 +24,41 @@ container SourceData: Using = "Units;Classifications;geometries"
 		unit<uint32> villages // SMOD_V1s6_opr_P2023_v1_2020_labelRC_DB -> villages -> degurba klasse 13
 		: StorageName = "%NetworkModelWorld_DataDir%/Settlements/SMOD_V1s6_opr_P2023_v1_2020_labelRC_DB.shp"
 		, StorageType = "gdal.vect"
-		, DialogData  = "WorldMollweide"
+		, DialogData  = "geometry"
 		, DialogType = "Map"
 		, StorageReadOnly = "TRUE"
 		{
 			attribute<WorldMollweide> geometry    (poly);
-			attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			// attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			attribute<WGS84>          geometry_LL (poly) :=  convert(geometry, WGS84);
 			attribute<int32>          ID                 := ID_RC_G0;
 			attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/villages/type/id, CalcCentroids/read/villages/type/centroid);
 			attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/villages/type/id, CalcCentroids/read/villages/type/continent_rel);
 			
-			unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
-			{
-				attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
-			}
+			// unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
+			// {
+				// attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
+			// }
 		}
 		
 		unit<uint32> semidensetowns // SMOD_V1s6_opr_P2023_v1_2020_labelSDUC_DB -> semi-dense towns -> degurba klasse 22
 		: StorageName = "%NetworkModelWorld_DataDir%/Settlements/SMOD_V1s6_opr_P2023_v1_2020_labelSDUC_DB.shp"
 		, StorageType = "gdal.vect"
-		, DialogData  = "WorldMollweide"
+		, DialogData  = "geometry"
 		, DialogType = "Map"
 		, StorageReadOnly = "TRUE"
 		{
 			attribute<WorldMollweide> geometry    (poly);
-			attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			// attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			attribute<WGS84>          geometry_LL (poly) :=  convert(geometry, WGS84);
 			attribute<int32>          ID                 := ID_SDUC_G0;
 			attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/semidensetowns/type/id, CalcCentroids/read/semidensetowns/type/centroid);
 			attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/semidensetowns/type/id, CalcCentroids/read/semidensetowns/type/continent_rel);
 			
-			unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
-			{
-				attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
-			}
+			// unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
+			// {
+				// attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
+			// }
 		}
 		
 		unit<uint32> towns // SMOD_V1s6_opr_P2023_v1_2020_labelDUC_DB -> towns -> degurba klasse 23
@@ -67,15 +69,16 @@ container SourceData: Using = "Units;Classifications;geometries"
 		, StorageReadOnly = "TRUE"
 		{
 			attribute<WorldMollweide> geometry    (poly);
-			attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			// attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			attribute<WGS84>          geometry_LL (poly) :=  convert(geometry, WGS84);
 			attribute<int32>          ID                 := ID_DUC_G0;
 			attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/towns/type/id, CalcCentroids/read/towns/type/centroid);
 			attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/towns/type/id, CalcCentroids/read/towns/type/continent_rel);
 			
-			unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
-			{
-				attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
-			}
+			// unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
+			// {
+				// attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
+			// }
 		}
 		
 		unit<uint32> cities // SMOD_V1s6_opr_P2023_v1_2020_labelUC_DB -> cities -> degurba klasse 30
@@ -86,15 +89,16 @@ container SourceData: Using = "Units;Classifications;geometries"
 		, StorageReadOnly = "TRUE"
 		{
 			attribute<WorldMollweide> geometry    (poly);
-			attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			// attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
+			attribute<WGS84>          geometry_LL (poly) :=  convert(geometry, WGS84);
 			attribute<int32>          ID                 := ID_UC_G0;
 			attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/cities/type/id, CalcCentroids/read/cities/type/centroid);
 			attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/cities/type/id, CalcCentroids/read/cities/type/continent_rel);
 			
-			unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
-			{
-				attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
-			}
+			// unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
+			// {
+				// attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
+			// }
 		}
 		
 		container CalcCentroids
@@ -169,11 +173,12 @@ container SourceData: Using = "Units;Classifications;geometries"
 			attribute<Countries>      country_rel          := collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/country_rel);
 			attribute<float64>        population           := collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/GridData);
 			attribute<Sep_units>      sep_unit_rel         := point_in_polygon(Geometry, sep_units/Geometry_LL);
-			attribute<WorldMollweide> org_rel_to_mollweide := convert(org_rel, WorldMollweide);
-			attribute<WGS84>          latlon_point         := convert(org_rel_to_mollweide, WGS84);
-			attribute<WGS84>          latlon_point_swapped := point(PointCol(latlon_point), PointRow(latlon_point), WGS84);
-			attribute<base_grid>      base_grid_rel        := convert(latlon_point_swapped, base_grid);
-			attribute<WGS84>          Geometry             := latlon_point_swapped;
+			// attribute<WorldMollweide> org_rel_to_mollweide := convert(org_rel, WorldMollweide);
+			// attribute<WGS84>          latlon_point         := convert(org_rel_to_mollweide, WGS84);
+			// attribute<WGS84>          latlon_point_swapped := point(PointCol(latlon_point), PointRow(latlon_point), WGS84);
+			// attribute<base_grid>      base_grid_rel        := convert(latlon_point_swapped, base_grid);
+			// attribute<WGS84>          Geometry             := latlon_point_swapped;
+			attribute<WGS84>          Geometry             := convert(org_rel, WGS84);
 		}
 		unit<uint64> store_LandCells := sel_LandCells, storagename = "= FileName+'.fss'" 
 		{

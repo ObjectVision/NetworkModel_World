@@ -53,7 +53,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		{
 			attribute<BaseProjection> Geometry    := inSettlements/point[org_rel];
 			attribute<string>         Label       := inSettlements/Label[org_rel];
-			attribute<WorldMollweide> centroid_mw := convert(point(PointCol(Geometry), PointRow(Geometry))[BaseProjection], WorldMollweide);
+			attribute<WorldMollweide> centroid_mw := convert(Geometry, WorldMollweide);
 			attribute<FinalNodeSet>   NodeId      := inSettlements/NodeId[org_rel];
 			attribute<float32>        Pop         := float32(inSettlements/Pop[org_rel]);
 			attribute<inCountries> 	  Country_rel := point_in_polygon(Geometry, inCountries/Geometry_LL);
@@ -61,15 +61,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		}
 		
 		attribute<BaseProjection>  inGrids_centroid_wgs    (inGrids) := inGrids/centroid;
-		attribute<float64>         inGrids_centroid_wgs_y  (inGrids) := PointCol(inGrids/centroid);
-		attribute<float64>         inGrids_centroid_wgs_x  (inGrids) := PointRow(inGrids/centroid);
-		attribute<BaseProjection>  inGrids_centroid_wgs_yx (inGrids) := point(inGrids_centroid_wgs_y, inGrids_centroid_wgs_x, BaseProjection);
-		attribute<WebMercator>     inGrids_centroid_wm     (inGrids) := convert(inGrids_centroid_wgs_yx, WebMercator);
-		
-		attribute<WebMercator>     inGrids_centroid_wm_old (inGrids) := convert(point(PointCol(inGrids_centroid_wgs), PointRow(inGrids_centroid_wgs))[BaseProjection], WebMercator);
-		
-		
-		
+		attribute<WebMercator>     inGrids_centroid_wm     (inGrids) := convert(inGrids_centroid_wgs, WebMercator);
 		
 		attribute<FinalNodeSet> Closest_node        (inGrids) := connect(FinalNodeSet/geometry, inGrids_centroid_wm);
 		attribute<bool>         Close_enough        (inGrids) := dist(inGrids_centroid_wm, FinalNodeSet/geometry[Closest_node]) < 100d;
@@ -200,30 +192,30 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			{
 				unit<uint32> all_grids:= ='union_unit(Country_Connected_Grids,'+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids')+')' 
 				{
-					attribute<Geometries/WebMercator>       Geometry                 := ='union_data(., Country_Connected_Grids/Geometry, '+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids/Geometry')+')';
-					attribute<float32>                      Pop                      := ='union_data(., Country_Connected_Grids/Pop, '+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids/Pop')+')';
-					attribute<Geometries/WorldMollweide>    Geometry_mw              := Geometry[Geometries/WorldMollweide];
-					attribute<Country_Settlements>          dependent_point          := ='union_data(., Specification_Reference/dependent_point, '+asitemlist(sep_Country_Units/ZoneId+'/dependent_point')+')';
-					attribute<Geometries/WorldMollweide>    geometry_mw_poly (poly)  := points2sequence(makepoly/Point, makepoly/SeqNr, makepoly/Ordinal);
+					attribute<WebMercator>         geometry                 := ='union_data(., Country_Connected_Grids/Geometry, '+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids/Geometry')+')';
+					attribute<float32>             Pop                      := ='union_data(., Country_Connected_Grids/Pop, '+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids/Pop')+')';
+					attribute<WorldMollweide>      geometry_mw              := Geometry[WorldMollweide];
+					attribute<Country_Settlements> dependent_point          := ='union_data(., Specification_Reference/dependent_point, '+asitemlist(sep_Country_Units/ZoneId+'/dependent_point')+')';
+					attribute<WorldMollweide>      geometry_mw_poly (poly)  := points2sequence(makepoly/Point, makepoly/SeqNr, makepoly/Ordinal);
 					
 					attribute<ipoint>                       iPoly (poly)             := points2sequence(makepoly/iPoints, makepoly/SeqNr, 4 - makepoly/Ordinal);
 					//attribute<ipoint>                     Polyset (poly)             := points2sequence(makepoly/iPoints, makepoly/SeqNr, 4 - makepoly/Ordinal);
 					
 					unit<uint32> makepoly:= union_unit(all_grids, all_grids, all_grids, all_grids, all_grids) 
 					{
-						attribute<Geometries/WorldMollweide> point   := union_data(., 
-																	Geometry_mw + const(point(-500d,  500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide), 
-																	Geometry_mw + const(point( 500d,  500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide), 
-																	Geometry_mw + const(point( 500d, -500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide), 
-																	Geometry_mw + const(point(-500d, -500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide),
-																	Geometry_mw + const(point(-500d,  500d, Geometries/WorldMollweide), all_grids, Geometries/WorldMollweide));
+						attribute<WorldMollweide> point   := union_data(., 
+																	Geometry_mw + const(point(-500d,  500d, WorldMollweide), all_grids, WorldMollweide), 
+																	Geometry_mw + const(point( 500d,  500d, WorldMollweide), all_grids, WorldMollweide), 
+																	Geometry_mw + const(point( 500d, -500d, WorldMollweide), all_grids, WorldMollweide), 
+																	Geometry_mw + const(point(-500d, -500d, WorldMollweide), all_grids, WorldMollweide),
+																	Geometry_mw + const(point(-500d,  500d, WorldMollweide), all_grids, WorldMollweide));
 						attribute<ipoint>                    iPoints := point[ipoint] / divpoint;
 						attribute<all_grids>                 SeqNr   := union_data(., id(all_grids), id(all_grids), id(all_grids), id(all_grids), id(all_grids));
 						attribute<uint32>                    Ordinal := id(.) / #all_grids;
 					}
 					
-					parameter<WorldMollweide> shiftpoint := min(Geometry_mw) - point(500d, 500d, Geometries/WorldMollweide);
-					parameter<ipoint>         divpoint   := point(1000i, 1000i, ipoint);
+					parameter<WorldMollweide> shiftpoint := min(Geometry_mw) - point(500d, 500d, WorldMollweide);
+					parameter<ipoint>         divpoint   := point_xy(1000i, 1000i, ipoint);
 				}
 			}
 			
@@ -319,17 +311,17 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				container currValue:= init;
 				container nextValue 
 				{
-					attribute<split_proto_catchments> spc_id (Add_Unconnected_Grids/all_grids):= point_in_polygon(Add_Unconnected_Grids/all_grids/point, split_proto_catchments/poly);
+					attribute<split_proto_catchments> spc_id (Add_Unconnected_Grids/all_grids):= point_in_polygon(Add_Unconnected_Grids/all_grids/geometry_mw, split_proto_catchments/poly);
 					
 					unit<uint32> split_proto_catchments := split_polygon(currValue/proto_catchments/ipoly) 
 					{
 						attribute<WorldMollweide>  poly            (poly) := Geometry[WorldMollweide];
 						attribute<float32>         sqkm                   := area(Geometry, int32)[float32] / (1000f * 1000f);
-						attribute<float32>         relsize                := sqkm / currValue/proto_catchments/sqkm[org_rel];
+						attribute<float32>         relsize                := sqkm / currValue/proto_catchments/sqkm[polygon_rel];
 						attribute<float32>         Pop                    := sum(Add_Unconnected_Grids/all_grids/Pop, spc_id);
 						attribute<uint32>          conn                   := pcount(spc_conn_matrix/F1) + pcount(spc_conn_matrix/F2);
-						attribute<bool>	           fua                    := currValue/proto_catchments/fua[org_rel];
-						attribute<uint32>          org_dep                := currValue/proto_catchments/org_dep[org_rel];
+						attribute<bool>	           fua                    := currValue/proto_catchments/fua[polygon_rel];
+						attribute<uint32>          org_dep                := currValue/proto_catchments/org_dep[polygon_rel];
 						attribute<bool>            no_pop                 := Pop < 100f;
 						attribute<bool>            only_fua_neighbours    := all(spc_conn_matrix/cfua, spc_conn_matrix/F1) && all(spc_conn_matrix/cfua, spc_conn_matrix/F2);
 						attribute<bool>            no_neighbours          := pcount(spc_conn_matrix/F1) + pcount(spc_conn_matrix/F2) < 1;
@@ -348,7 +340,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 						attribute<float32>         tscore                 := makedefined(spc_conn_matrix/score[tbest], -1f);
 						
 						attribute<.>               candidate              := switch(
-																				case(fua, org_rel)
+																				case(fua, polygon_rel)
 																				, case(drop, (0 / 0)[.])
 																				, case(exclave, #.+1)
 																				, case(join && fscore >= tscore, spc_conn_matrix/F2[fbest])
@@ -363,7 +355,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 						unit<uint32> spc_conn_matrix:= polygon_connectivity(Geometry) 
 						{
 							attribute<bool>     cfua        := fua[F1] || fua[F2];
-							attribute<bool>     prior_rel   := org_rel[F1] == org_rel[F2];
+							attribute<bool>     prior_rel   := polygon_rel[F1] == polygon_rel[F2];
 							attribute<bool>     unpreferred := cfua || prior_rel;
 							attribute<float32>  score       := (float32(!cfua) * max_elem(Pop[F1], Pop[F2])) / (1f + (float32(prior_rel) * 1000f));
 						}
@@ -436,7 +428,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		unit<uint32> FinalLinkSet := NetwerkSpec/FinalLinkSet_Read;
 		unit<uint32> FinalNodeSet := NetwerkSpec/FinalNodeSet_Read;
 		
-		attribute<WebMercator>  Org_centroid_wm (Org) := convert(point(PointCol(Org/centroid), PointRow(Org/centroid))[BaseProjection], WebMercator);
+		attribute<WebMercator>  Org_centroid_wm (Org) := convert(Org/centroid, WebMercator);
 		attribute<FinalNodeSet> Closest_node    (Org) := connect(FinalNodeSet/geometry, Org_centroid_wm);
 		attribute<bool>         Close_enough    (Org) := dist(Org_centroid_wm, FinalNodeSet/geometry[Closest_node]) < 100d;
 		attribute<FinalNodeSet> Org_NodeId      (Org) := Close_enough ? Closest_node : const(0 / 0, Org, FinalNodeSet);
