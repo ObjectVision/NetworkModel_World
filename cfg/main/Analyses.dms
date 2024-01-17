@@ -170,7 +170,14 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 					);
 					
 				attribute<Country_Settlements> service_area 	(FinalNodeSet) := rlookup(service_area(FinalLinkSet/F1, FinalLinkSet/F2, Closest_TravelTime/TraceBack), Country_Settlements/NodeId);				
-				attribute<Country_Settlements> dependent_point	(Country_Connected_Grids):= service_area[Country_Connected_Grids/NodeId];
+				attribute<Country_Settlements> proto_dependent_point	(Country_Connected_Grids):= service_area[Country_Connected_Grids/NodeId];
+				unit<uint32> with_values:= subset(isdefined(proto_dependent_point)) {attribute<WebMercator> Geometry:= Country_Connected_Grids/Geometry[Nr_OrgEntity]; attribute<Country_Settlements> depval:= proto_dependent_point[Nr_OrgEntity];}
+				unit<uint32> without_values:= subset(isnull(proto_dependent_point)) {
+					attribute<WebMercator> Geometry:= Country_Connected_Grids/Geometry[Nr_OrgEntity]; 
+					attribute<Country_Settlements> depval:= with_values/depval[connect(with_values/Geometry, Geometry)];
+				}
+				attribute<without_values> wv_rel (Country_Connected_Grids):= invert(without_values/Nr_OrgEntity);
+				attribute<Country_Settlements> dependent_point (Country_Connected_Grids):= #with_values > 0 ? makedefined(proto_dependent_point, without_values/depval[wv_rel]) : proto_dependent_point;
 			}
 			/*container Gravity_spec {
 				unit<uint64> Create_Matrix:= dijkstra_m64('bidirectional(link_flag);startPoint(Node_rel);endPoint(Node_rel);limit(OrgZone_max_mass,DstZone_mass);od:OrgZone_rel,DstZone_rel,impedance'

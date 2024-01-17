@@ -76,7 +76,7 @@ container RegionalUnits : using = "geometries"
 		
 		attribute<store_Countries>  store_countries_rel  := rlookup(Country, store_Countries/values);
 		attribute<Continents>       continents_rel := rlookup(AsItemName(continent_edit), Continents/name);
-		attribute<string>           continent_edit := continent == 'Australia' || continent == 'Oceania' ? 'Australia_Oceania' : continent;
+		attribute<string>           continent_edit := switch(case(continent == 'Australia' || continent == 'Oceania', 'Australia_Oceania'), case(GID_0 = 'TUR', 'Europe'), continent);
 	}
 	
 	unit<uint8> Continents := Classifications/Continents
