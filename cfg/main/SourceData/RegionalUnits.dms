@@ -29,7 +29,7 @@ container RegionalUnits : using = "geometries"
 		attribute<Countries>        country_rel;
 	}
 	
-	unit<uint32> store_Countries := unique(Local_Units/Country)
+	unit<uint32> store_Countries := unique(Local_Units/Country_edit)
 	, storagename = "%NetworkModelWorld_DataDir%/Regions/fss/Countries.fss"
 	{
 		attribute<string>           Label              := Values;
@@ -73,10 +73,25 @@ container RegionalUnits : using = "geometries"
 	, StorageReadOnly = "true"
 	{
 		attribute<wgs84>            Geometry (poly);
+		attribute<string>			Country_edit:= GID_0 = 'RUS' ? Continent_edit + '_' + Country : Country;
 		
-		attribute<store_Countries>  store_countries_rel  := rlookup(Country, store_Countries/values);
+		attribute<store_Countries>  store_countries_rel  := rlookup(Country_edit, store_Countries/values);
 		attribute<Continents>       continents_rel := rlookup(AsItemName(continent_edit), Continents/name);
-		attribute<string>           continent_edit := switch(case(continent == 'Australia' || continent == 'Oceania', 'Australia_Oceania'), case(GID_0 = 'TUR', 'Europe'), continent);
+		attribute<string>           continent_edit := switch(
+			case(continent == 'Australia' || continent == 'Oceania', 'Australia_Oceania'), 
+			case(GID_0 = 'TUR', 'Europe'), 
+			case(isdefined(rus_id) && russian_units/IsEuropean[rus_id], 'Europe'), 
+			case(isdefined(rus_id) && !russian_units/IsEuropean[rus_id], 'Asia'), 
+			continent);
+		attribute<russian_units> 	rus_id:= invert(russian_units/Nr_OrgEntity);
+
+	unit<uint32> russian_units:= subset(GID_0 = 'RUS') { // addition to replace single Russia units with an Asian and European Russian entities (based on OSM coverage)
+			attribute<wgs84> Geometry (poly):= Local_Units/Geometry[Nr_OrgEntity];
+			attribute<uint32> European_roads:= pcount(point_in_polygon(first_node(Infrastructure/OSM/Per_OSM_Continent/Europe/Roads/geometry), Geometry));
+			attribute<uint32> Asian_roads:= pcount(point_in_polygon(first_node(Infrastructure/OSM/Per_OSM_Continent/Asia/Roads/geometry), Geometry));
+			attribute<bool>	  IsEuropean:= Asian_roads < European_roads;
+		}
+	
 	}
 	
 	unit<uint8> Continents := Classifications/Continents
