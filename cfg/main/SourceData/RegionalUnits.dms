@@ -38,20 +38,6 @@ container RegionalUnits : using = "geometries"
 		attribute<WorldMollweide>   Geometry_MW (poly) := convert(geometry, WorldMollweide);
 		attribute<WebMercator>      Geometry_WM (poly) := convert(geometry, WebMercator);
 		attribute<Continents>       Continents_rel     := first(Local_Units/Continents_rel, Local_Units/store_countries_rel);
-		
-		// convert wgs84 geometry to mollweide geometry
-		// container Convert_wgs84_xy_to_yx : DisableStorage = "true"
-		// {
-			// unit<uint32> border_points := sequence2points(geometry)
-			// {
-				// attribute<wgs84> point_yx := Point(PointCol(point), PointRow(point), wgs84);
-			// }
-			// unit<uint32> Country_ui32  := range(uint32, 0, uint32(#store_Countries))
-			// {
-				// attribute<wgs84> Geometry_yx (poly) := points2sequence_pso(border_points/point_yx, border_points/sequence_rel[Country_ui32], border_points/ordinal);
-			// }
-			// attribute<wgs84> Geometry_yx (poly, ..) := union_data(store_Countries, Country_ui32/Geometry_yx);
-		// }
 	}
 	
 	unit<uint32> store_sep_units:= split_polygon(Countries/iGeom), descr = "separated polygons that entail a country."
