@@ -107,8 +107,11 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				attribute<BaseProjection>     geometry (poly)    := in_sep_units/Geometry[org_rel];
 				attribute<string>             ZoneId             := in_sep_units/ZoneId[org_rel];
 				attribute<bool>               any_connection     := pcount(Country_Connected_Grids/scu_rel) > 0;
+				attribute<bool>				  any_grid	 		 := pcount(Country_Unconnected_Grids/scu_rel) > 0 || any_connection;
 			}
-			
+			unit<uint32> Rel_sep_country_units := subset(sep_Country_Units/any_grid) {
+				attribute<string>			 ZoneId:= sep_Country_Units/ZoneId[Nr_OrgEntity];
+			}
 			unit<uint32> Country_Settlements := select_with_org_rel(SelectedSettlements/Country_rel = inCountry) 
 			{
 				attribute<BaseProjection>     Geometry    := SelectedSettlements/Geometry[org_rel];
@@ -177,7 +180,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 					attribute<Country_Settlements> depval:= with_values/depval[connect(with_values/Geometry, Geometry)];
 				}
 				attribute<without_values> wv_rel (Country_Connected_Grids):= invert(without_values/Nr_OrgEntity);
-				attribute<Country_Settlements> dependent_point (Country_Connected_Grids):= #with_values > 0 ? makedefined(proto_dependent_point, without_values/depval[wv_rel]) : proto_dependent_point;
+				attribute<Country_Settlements> dependent_point (Country_Connected_Grids):= #with_values > 0 ? makedefined(proto_dependent_point, without_values/depval[wv_rel]) : 0;
 			}
 			/*container Gravity_spec {
 				unit<uint64> Create_Matrix:= dijkstra_m64('bidirectional(link_flag);startPoint(Node_rel);endPoint(Node_rel);limit(OrgZone_max_mass,DstZone_mass);od:OrgZone_rel,DstZone_rel,impedance'
@@ -197,12 +200,12 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 					, (sep_Country_Units/any_connection ? 'Add_Unconnected_Grids__wconn_T(' : 'Add_Unconnected_Grids__noconn_T(')+string(id(sep_Country_Units))+')'
 				) 
 			{
-				unit<uint32> all_grids:= ='union_unit(Country_Connected_Grids,'+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids')+')' 
+				unit<uint32> all_grids:= ='union_unit(Country_Connected_Grids,'+asitemlist(Rel_sep_country_units/ZoneId+'/sepunit_unconnected_grids')+')' 
 				{
-					attribute<WebMercator>         geometry                 := ='union_data(., Country_Connected_Grids/Geometry, '+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids/Geometry')+')';
-					attribute<float32>             Pop                      := ='union_data(., Country_Connected_Grids/Pop, '+asitemlist(sep_Country_Units/ZoneId+'/sepunit_unconnected_grids/Pop')+')';
+					attribute<WebMercator>         geometry                 := ='union_data(., Country_Connected_Grids/Geometry, '+asitemlist(Rel_sep_country_units/ZoneId+'/sepunit_unconnected_grids/Geometry')+')';
+					attribute<float32>             Pop                      := ='union_data(., Country_Connected_Grids/Pop, '+asitemlist(Rel_sep_country_units/ZoneId+'/sepunit_unconnected_grids/Pop')+')';
 					attribute<WorldMollweide>      geometry_mw              := Geometry[WorldMollweide];
-					attribute<Country_Settlements> dependent_point          := ='union_data(., Specification_Reference/dependent_point, '+asitemlist(sep_Country_Units/ZoneId+'/dependent_point')+')';
+					attribute<Country_Settlements> dependent_point          := ='union_data(., Specification_Reference/dependent_point, '+asitemlist(Rel_sep_country_units/ZoneId+'/dependent_point')+')';
 					attribute<WorldMollweide>      geometry_mw_poly (poly)  := points2sequence(makepoly/Point, makepoly/SeqNr, makepoly/Ordinal);
 					
 					attribute<ipoint>                       iPoly (poly)             := points2sequence(makepoly/iPoints, makepoly/SeqNr, 4 - makepoly/Ordinal);
@@ -252,15 +255,19 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				{
 					attribute<Geometries/WebMercator> Geometry:= Country_Unconnected_Grids/Geometry[org_rel]; 
 					attribute<float32> pop:= Country_Unconnected_Grids/pop[org_rel];
-					attribute<float32> pull:= sum(grids_comb/pop_j / grids_comb/gridsdist, grids_comb/nr_1);
+					attribute<dpoint>  pop_point:= populated ? point(float64(pop), float64(pop), dpoint) : const(point(1.0d, 1.0d, dpoint),.,dpoint);
+					//attribute<float32> pull:= sum(grids_comb/pop_j / grids_comb/gridsdist, grids_comb/nr_1);
 					
-					unit<uint32> grids_comb:= combine(sepunit_unconnected_grids, sepunit_unconnected_grids) {
+					attribute<dpoint>  wpoint:= Geometry[dpoint] * pop_point;
+					
+					/*unit<uint64> grids_comb:= combine_uint64(sepunit_unconnected_grids, sepunit_unconnected_grids) {
 						attribute<float32> gridsdist:= float32(dist(Geometry[Nr_1], Geometry[Nr_2]) / 1000d) + const(1f,.,float32);
 						attribute<float32> pop_j:= populated ? pop[nr_2] * 1000f : 1000f;
-					}
+					}*/
 				}
 				parameter<bool> populated:= sum(sepunit_unconnected_grids/Pop) > 0f;
-				parameter<sepunit_unconnected_grids> centroid_rel:= max_index(sepunit_unconnected_grids/pull);
+				parameter<Geometries/WebMercator> centroid:= (sum(sepunit_unconnected_grids/wpoint) / sum(sepunit_unconnected_grids/pop_point))[Geometries/WebMercator];
+				parameter<sepunit_unconnected_grids> centroid_rel:= connect(sepunit_unconnected_grids/Geometry, centroid);
 				parameter<Country_Settlements> closest_settlement:= #Country_Settlements > 0 ? connect(Country_Settlements/Geometry_wm, sepunit_unconnected_grids/Geometry[centroid_rel]) : 0;
 				attribute<Country_Settlements> dependent_point (sepunit_unconnected_grids):= const(closest_settlement, sepunit_unconnected_grids, Country_Settlements);
 			}
@@ -420,7 +427,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				attribute<FinalNodeSet>         NodeRef         := Country_Settlements/NodeId[settRef]; //, Country_Connected_Grids/NodeId[connect(Country_Connected_Grids/Geometry_mw, centroid_or_mid(Geometry))]);
 				attribute<string>               Label           := Country_Settlements/Label[settRef];
 			}
-			parameter<string> result_available:= strcount(ExistingFile('X_X_X_X',(filepath+'.shp')), 'X_X_X_X') < 1; 
+			//parameter<string> result_available:= strcount(ExistingFile('X_X_X_X',(filepath+'.shp')), 'X_X_X_X') < 1; 
 		}
 	}
 	
