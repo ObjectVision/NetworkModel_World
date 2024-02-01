@@ -107,7 +107,7 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 			attribute<string>      Label              := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/Label)';
 			attribute<Countries>   country_rel        := point_in_polygon(centroid, Countries/Geometry);
 			
-			parameter<string> refname:= 'all_settlements';
+			parameter<string> refname:= 'all_settlements_'+inUnit/set;
 			//collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/GridData)
 		}
 	}

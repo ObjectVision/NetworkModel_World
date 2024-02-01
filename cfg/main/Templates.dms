@@ -132,7 +132,7 @@ container Templates: Using = "Units;Classifications;geometries"
 				}
 			}
 
-			unit<uint32> LinkSet_Write := LinkSet,	StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Linkset_O-'+OrgName+'_D-'+Destname+'.fss'"
+			unit<uint32> LinkSet_Write := LinkSet,	StorageName = "= '%LocalDataProjDir%/Network_Setup/'+Continent_name+'/Linkset_O-'+OrgName+'_D-'+Destname+'.fss'"
 			{
 				attribute<km_hr>           KPH                  := LinkSet/KPH;
 				attribute<km>              LengthKm             := LinkSet/LengthKm;
@@ -143,7 +143,7 @@ container Templates: Using = "Units;Classifications;geometries"
 				attribute<bool>            IsOD_connection_road := LinkSet/IsOD_connection_road;
 			}
 			
-			unit<uint32> LinkSet_Read : StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Linkset_O-'+OrgName+'_D-'+Destname+'.fss'", StorageReadOnly = "True"
+			unit<uint32> LinkSet_Read : StorageName = "= '%LocalDataProjDir%/Network_Setup/'+Continent_name+'/Linkset_O-'+OrgName+'_D-'+Destname+'.fss'", StorageReadOnly = "True"
 			{
 				attribute<km_hr>            KPH;
 				attribute<km>               LengthKm;
@@ -233,13 +233,13 @@ container Templates: Using = "Units;Classifications;geometries"
 			unit<uint32> LastLinkSet  := OptimiseNetwork/LastIter/IntermediateLinkSet;
 			
 			// hardstore optimised network and nodeset
-			unit<uint32> FinalNodeSet_Write := select_with_org_rel(pcount(LastLinkSet/F1)+pcount(LastLinkSet/F2) > 0),	StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Final_Nodeset_O-'+OrgName+'_D-'+Destname+'.fss'" 
+			unit<uint32> FinalNodeSet_Write := select_with_org_rel(pcount(LastLinkSet/F1)+pcount(LastLinkSet/F2) > 0),	StorageName = "= '%LocalDataProjDir%/Network_Setup/'+Continent_name+'/Final_Nodeset_O-'+OrgName+'_D-'+Destname+'.fss'" 
 			{
 				attribute<WebMercator>        geometry                  := org_rel->values;
 				attribute<.>                  OrgNode_rel  (OrgDomain)  := rlookup(OrgDomain/centroid_wm,  geometry);
 				attribute<.>                  DestNode_rel (DestDomain) := rlookup(DestDomain/centroid_wm, geometry);	
 			}
-			unit<uint32> FinalLinkSet_Write := LastLinkSet,	StorageName = "= '%LocalDataProjDir%/'+Continent_name+'/Final_Linkset_O-'+OrgName+'_D-'+Destname+'.fss'" 
+			unit<uint32> FinalLinkSet_Write := LastLinkSet,	StorageName = "= '%LocalDataProjDir%/Network_Setup/'+Continent_name+'/Final_Linkset_O-'+OrgName+'_D-'+Destname+'.fss'" 
 			{
 				attribute<FinalNodeSet_Write> F1                   := invert(FinalNodeSet_Write/org_rel)[LastLinkSet/F1];
 				attribute<FinalNodeSet_Write> F2                   := invert(FinalNodeSet_Write/org_rel)[LastLinkSet/F2];

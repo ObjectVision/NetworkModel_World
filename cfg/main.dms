@@ -2,10 +2,11 @@ container NetworkModel_World : IntegrityCheck = "GeoDMSVersion() >= 14.0900" //b
 { 
 	container MakeUnlinkedData
 	{
-		parameter<string> s1_Create_Countries           := 'Ready', ExplicitSuppliers = "/SourceData/RegionalUnits/store_Countries;/SourceData/RegionalUnits/store_sep_units";
-		parameter<string> s2_Create_LandCells           := 'Ready', ExplicitSuppliers = "/SourceData/population/store_LandCells";
-		parameter<string> s3_Create_SettlementCentroids := 'Ready', ExplicitSuppliers = "/SourceData/Settlements/CalcCentroids/Generate";
-		parameter<string> s4_Create_OSM_Continents_fss  := 'Ready', ExplicitSuppliers = "/SourceData/Infrastructure/OSM/Per_OSM_Continent/Generate_all";
+		parameter<string> s1_Create_Countries           := 'Ready', ExplicitSuppliers = "/SourceData/RegionalUnits/store_Countries;";
+		parameter<string> s2_Create_Sep_Units           := 'Ready', ExplicitSuppliers = "/SourceData/RegionalUnits/store_sep_units;";
+		parameter<string> s3_Create_LandCells           := 'Ready', ExplicitSuppliers = "/SourceData/population/store_LandCells";
+		parameter<string> s4_Create_SettlementCentroids := 'Ready', ExplicitSuppliers = "/SourceData/Settlements/CalcCentroids/Generate";
+		parameter<string> s5_Create_OSM_Continents_fss  := 'Ready', ExplicitSuppliers = "/SourceData/Infrastructure/OSM/Per_OSM_Continent/Generate_all";
 		
 		container Create_InitialLinkSet_perContinent :=
 			for_each_nedv(

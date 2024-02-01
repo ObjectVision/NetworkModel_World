@@ -51,17 +51,18 @@ container collect_results: using = "Units;Geometries;SourceData/RegionalUnits;" 
 			}
 			unit<uint32> countries_with_results:= subset(all_countries/results_available) {
 				attribute<string> ZoneId:= all_countries/ZoneId[nr_orgentity];
+				attribute<string> Continent:= Continents/Name[all_countries/continents_rel[Nr_OrgEntity]];
 				attribute<string> filepath:= all_countries/reference[nr_orgentity];
 			}
-			container loadfiles:= for_each_ne(countries_with_results/ZoneId, 'load_polygons('+quote(countries_with_results/filepath)+')') {
+			container loadfiles:= for_each_ne(countries_with_results/Continent+'_'+countries_with_results/ZoneId, 'load_polygons('+quote(countries_with_results/filepath)+')') {
 				container combined_storage {
-					unit<uint32> all_catchments:= ='union_unit('+asitemlist(countries_with_results/ZoneId+'/inFile')+')', storagename = "= pathbit+'/mozaik/all_ran.dbf'" {
-						attribute<WorldMollweide> 	Geometry (poly):= ='union_data(.,'+asitemlist(countries_with_results/ZoneId+'/inFile/Geometry')+')', storagename = "= pathbit+'/mozaik/all_ran.shp'";
-						attribute<float32> 			pop:= ='union_data(.,'+asitemlist('float32('+countries_with_results/ZoneId+'/inFile/pop)')+')';
-						attribute<string>			Country:= ='union_data(.,'+asitemlist('const('+quote(countries_with_results/ZoneId)+', '+countries_with_results/ZoneId+'/inFile, string)')+')';
-						attribute<string>			Name:= ='union_data(.,'+asitemlist('('+countries_with_results/ZoneId+'/inFile/Name)')+')';
-						attribute<uint32>			Def:= ='union_data(.,'+asitemlist('uint32('+countries_with_results/ZoneId+'/inFile/Def)')+')';
-						attribute<uint32>			Iter:= ='union_data(.,'+asitemlist('uint32('+countries_with_results/ZoneId+'/inFile/Iter)')+')';
+					unit<uint32> all_catchments:= ='union_unit('+asitemlist(countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile')+')', storagename = "= pathbit+'/mozaik/all_ran.dbf'" {
+						attribute<WorldMollweide> 	Geometry (poly):= ='union_data(.,'+asitemlist(countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/Geometry')+')', storagename = "= pathbit+'/mozaik/all_ran.shp'";
+						attribute<float32> 			pop:= ='union_data(.,'+asitemlist('float32('+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/pop)')+')';
+						attribute<string>			Country:= ='union_data(.,'+asitemlist('const('+quote(countries_with_results/ZoneId)+', '+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile, string)')+')';
+						attribute<string>			Name:= ='union_data(.,'+asitemlist('('+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/Name)')+')';
+						attribute<uint32>			Def:= ='union_data(.,'+asitemlist('uint32('+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/Def)')+')';
+						attribute<uint32>			Iter:= ='union_data(.,'+asitemlist('uint32('+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/Iter)')+')';
 					}
 				}
 			}	

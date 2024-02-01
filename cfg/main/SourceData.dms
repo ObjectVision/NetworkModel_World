@@ -1,13 +1,13 @@
 container SourceData: Using = "Units;Classifications;geometries"
 {
-	
-	parameter<bool> store_fss:= True, explicitsuppliers = "RegionalUnits/store_Countries;population/store_LandCells;Settlements/CalcCentroids/Generate";
-	
 	#include<Infrastructure.dms>
 	#include<RegionalUnits.dms>
 	
 	container Settlements : using = "RegionalUnits"
 	{
+		
+		parameter<string> set:= 'SMOD_V1s6_opr_P2023_v1_2020';
+	
 		unit<uint32> all_settlements:= union_unit(villages, semidensetowns, towns, cities), dialogdata = "geometry_LL", dialogtype = "map" 
 		{
 			attribute<WorldMollweide> geometry    (poly) := union_data(., villages/geometry, semidensetowns/geometry, towns/geometry, cities/geometry);
@@ -18,38 +18,32 @@ container SourceData: Using = "Units;Classifications;geometries"
 			attribute<Continents>     continent_rel      := union_data(., villages/continent_rel, semidensetowns/continent_rel, towns/continent_rel, cities/continent_rel);
 			attribute<float32>     	  population         := float32(union_data(., villages/POP_2020, semidensetowns/POP_2020, towns/POP_2020, cities/POP_2020));
 			attribute<string>         Label              := MakeDefined(Countries/Label[country_rel],'None')+'_'+union_data(.,const('vill',villages,string),const('sdt',semidensetowns,string),const('town',towns,string),const('city',cities,string))+'_'+string(ID);
+			parameter<string> 		  set				 := Settlements/set;
 		}
 		
 		
 		unit<uint32> villages // SMOD_V1s6_opr_P2023_v1_2020_labelRC_DB -> villages -> degurba klasse 13
-		: StorageName = "%NetworkModelWorld_DataDir%/Settlements/SMOD_V1s6_opr_P2023_v1_2020_labelRC_DB.shp"
+		: StorageName = "= '%NetworkModelWorld_DataDir%/Settlements/'+set+'/'+set+'_labelRC_DB.shp'"
 		, StorageType = "gdal.vect"
 		, DialogData  = "geometry"
 		, DialogType = "Map"
 		, StorageReadOnly = "TRUE"
 		{
 			attribute<WorldMollweide> geometry    (poly);
-			// attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
 			attribute<WGS84>          geometry_LL (poly) :=  convert(geometry, WGS84);
 			attribute<int32>          ID                 := ID_RC_G0;
 			attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/villages/type/id, CalcCentroids/read/villages/type/centroid);
 			attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/villages/type/id, CalcCentroids/read/villages/type/continent_rel);
-			
-			// unit<uint32> xy_to_yx := sequence2points(geometry[WGS84])
-			// {
-				// attribute<WGS84> point_yx := point(PointCol(point), PointRow(point))[WGS84];
-			// }
 		}
 		
 		unit<uint32> semidensetowns // SMOD_V1s6_opr_P2023_v1_2020_labelSDUC_DB -> semi-dense towns -> degurba klasse 22
-		: StorageName = "%NetworkModelWorld_DataDir%/Settlements/SMOD_V1s6_opr_P2023_v1_2020_labelSDUC_DB.shp"
+		: StorageName = "= '%NetworkModelWorld_DataDir%/Settlements/'+set+'/'+set+'_labelSDUC_DB.shp'"
 		, StorageType = "gdal.vect"
 		, DialogData  = "geometry"
 		, DialogType = "Map"
 		, StorageReadOnly = "TRUE"
 		{
 			attribute<WorldMollweide> geometry    (poly);
-			// attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
 			attribute<WGS84>          geometry_LL (poly) :=  convert(geometry, WGS84);
 			attribute<int32>          ID                 := ID_SDUC_G0;
 			attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/semidensetowns/type/id, CalcCentroids/read/semidensetowns/type/centroid);
@@ -62,7 +56,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 		}
 		
 		unit<uint32> towns // SMOD_V1s6_opr_P2023_v1_2020_labelDUC_DB -> towns -> degurba klasse 23
-		: StorageName = "%NetworkModelWorld_DataDir%/Settlements/SMOD_V1s6_opr_P2023_v1_2020_labelDUC_DB.shp"
+		: StorageName = "= '%NetworkModelWorld_DataDir%/Settlements/'+set+'/'+set+'_labelDUC_DB.shp'"
 		, StorageType = "gdal.vect"
 		, DialogData  = "WorldMollweide"
 		, DialogType = "Map"
@@ -82,7 +76,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 		}
 		
 		unit<uint32> cities // SMOD_V1s6_opr_P2023_v1_2020_labelUC_DB -> cities -> degurba klasse 30
-		: StorageName = "%NetworkModelWorld_DataDir%/Settlements/SMOD_V1s6_opr_P2023_v1_2020_labelUC_DB.shp"
+		: StorageName = "= '%NetworkModelWorld_DataDir%/Settlements/'+set+'/'+set+'_labelUC_DB.shp'"
 		, StorageType = "gdal.vect"
 		, DialogData  = "geometry_LL"
 		, DialogType = "Map"
@@ -123,7 +117,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 				///
 				
 				unit<uint32> type := ='Settlements/'+SettlementType_name
-				, StorageName = "='%NetworkModelWorld_DataDir%/Settlements/'+SettlementType_name+'_centroid_Pop-'+Population/gridsize+'m.fss'"
+				, StorageName = "='%NetworkModelWorld_DataDir%/Settlements/'+set+'/'+SettlementType_name+'_centroid_Pop-'+Population/gridsize+'m.fss'"
 				{
 					attribute<WGS84>          centroid           := CalcPopCentroids/CalcPopCentroids/geometry;
 					attribute<int32>          ID                 := ='Settlements/'+SettlementType_name+'/ID';
@@ -139,7 +133,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 				///
 				
 				unit<uint32> type
-				: StorageName = "='%NetworkModelWorld_DataDir%/Settlements/'+SettlementType_name+'_centroid_Pop-'+Population/gridsize+'m.fss'"
+				: StorageName = "='%NetworkModelWorld_DataDir%/Settlements/'+set+'/'+SettlementType_name+'_centroid_Pop-'+Population/gridsize+'m.fss'"
 				, StorageReadOnly = "true"
 				{
 					attribute<WGS84>          centroid;
@@ -164,26 +158,19 @@ container SourceData: Using = "Units;Classifications;geometries"
 		, 	LazyCalculated  = "true"
 		{ 
 			attribute<float64>      GridData; // don't read this; memory will explode
-			attribute<Countries>    country_rel:= poly2grid(Countries/Geometry_MW, .);
+			attribute<Sep_units>    sep_unit_rel:= poly2grid(Sep_units/Geometry_MW, .);
 		}
 		
-		unit<uint64> sel_LandCells := select(big_raster/GridData >= 0d && IsDefined(big_raster/country_rel)), DialogType = "map", DialogData = "org_rel" 
+		unit<uint64> sel_LandCells := select(IsDefined(big_raster/sep_unit_rel)), DialogType = "map", DialogData = "org_rel"  // big_raster/GridData >= 0d && selection criterion removed (problematic exception in Canada)
 		{
-			attribute<big_raster>     org_rel              := collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), id(big_raster));
-			attribute<Countries>      country_rel          := collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/country_rel);
-			attribute<float64>        population           := collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/GridData);
-			attribute<Sep_units>      sep_unit_rel         := point_in_polygon(Geometry, sep_units/Geometry_LL);
-			// attribute<WorldMollweide> org_rel_to_mollweide := convert(org_rel, WorldMollweide);
-			// attribute<WGS84>          latlon_point         := convert(org_rel_to_mollweide, WGS84);
-			// attribute<WGS84>          latlon_point_swapped := point(PointCol(latlon_point), PointRow(latlon_point), WGS84);
-			// attribute<base_grid>      base_grid_rel        := convert(latlon_point_swapped, base_grid);
-			// attribute<WGS84>          Geometry             := latlon_point_swapped;
+			attribute<big_raster>     org_rel              := collect_by_cond(sel_LandCells, IsDefined(big_raster/sep_unit_rel), id(big_raster));
+			attribute<Sep_units>      sep_unit_rel         := collect_by_cond(sel_LandCells, IsDefined(big_raster/sep_unit_rel), big_raster/sep_unit_rel);
+			attribute<float64>        population           := collect_by_cond(sel_LandCells, IsDefined(big_raster/sep_unit_rel), big_raster/GridData);
 			attribute<WGS84>          Geometry             := convert(org_rel, WGS84);
 		}
 		unit<uint64> store_LandCells := sel_LandCells, storagename = "= FileName+'.fss'" 
 		{
 			attribute<big_raster>     org_rel              := sel_LandCells/org_rel;
-			attribute<Countries>      country_rel          := sel_LandCells/country_rel;
 			attribute<Sep_units>      sep_unit_rel         := sel_LandCells/sep_unit_rel;
 			attribute<float64>        population           := sel_LandCells/population;
 			attribute<WGS84>          geometry             := sel_LandCells/geometry;
@@ -191,10 +178,10 @@ container SourceData: Using = "Units;Classifications;geometries"
 		unit<uint64> LandCells : storagename = "= propvalue(store_LandCells, 'StorageName')", StorageReadOnly = "True" 
 		{
 			attribute<big_raster>     org_rel;
-			attribute<Countries>      country_rel;
 			attribute<Sep_units>      sep_unit_rel;
 			attribute<float64>        population;
 			attribute<WGS84>          geometry;
+			attribute<Countries>      country_rel	:= Sep_units/country_rel[sep_unit_rel];
 			attribute<Continents>     continent_rel := Countries/continents_rel[country_rel];
 			attribute<WGS84>          centroid      := geometry;
 		}
