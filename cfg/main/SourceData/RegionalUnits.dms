@@ -58,7 +58,7 @@ container RegionalUnits : using = "geometries"
 			attribute<wgs84> Geometry (poly);
 			attribute<string> GID_0:= FIRST_ISOA;
 		}
-		unit<uint32> russian_units: storagename = "%NetworkModelWorld_DataDir%/Regions/temp/rus_dissolved.shp", storagetype = "gdal.vect", storagereadonly = "true" {
+		unit<uint32> russian_units: storagename = "%NetworkModelWorld_DataDir%/Regions/rus_dissolved.shp", storagetype = "gdal.vect", storagereadonly = "true" {
 			attribute<wgs84> 		Geometry (poly);
 			attribute<string> 		GID_0: ['ERUS', 'ARUS'];
 			attribute<string> 		Continent: ['Europe', 'Asia'];

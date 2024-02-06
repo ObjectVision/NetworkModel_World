@@ -9,11 +9,11 @@ container Functional_Rural_Areas: using = "Units;Geometries;SourceData/RegionalU
 		attribute<string> LabelText: ['mean', 'biggest_centres'];
 	}
 	
-	unit<uint32> variants: NrOfRows = 2 {
+	unit<uint32> variants: NrOfRows = 4 {
 		attribute<string>  LabelText:= 'idealpop'+string(ideal_pop_M)+'_maxt'+string(max_time_h)+(min_time_h > 0d ? '_mint'+string(min_time_h) : '') + (agg_m > 0 ? '_agg_' + tt_aggregation_method/LabelText[agg_m] : '');
-		attribute<float32> ideal_pop_M: [2, 4];
-		attribute<min_f> max_time_h:  [240, 240];
-		attribute<min_f> min_time_h:  [120, 120];
+		attribute<float32> ideal_pop_M: [2, 4, 4, 4];
+		attribute<min_f> max_time_h:  [240, 240, 480, 480];
+		attribute<min_f> min_time_h:  [120, 120, 120, 240];
 		attribute<tt_aggregation_method> agg_m:= (id(.)>#.)[tt_aggregation_method];
 	}	
 		

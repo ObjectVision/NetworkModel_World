@@ -267,8 +267,8 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				}
 				parameter<bool> populated:= sum(sepunit_unconnected_grids/Pop) > 0f;
 				parameter<Geometries/WebMercator> centroid:= (sum(sepunit_unconnected_grids/wpoint) / sum(sepunit_unconnected_grids/pop_point))[Geometries/WebMercator];
-				parameter<sepunit_unconnected_grids> centroid_rel:= connect(sepunit_unconnected_grids/Geometry, centroid);
-				parameter<Country_Settlements> closest_settlement:= #Country_Settlements > 0 ? connect(Country_Settlements/Geometry_wm, sepunit_unconnected_grids/Geometry[centroid_rel]) : 0;
+				//parameter<sepunit_unconnected_grids> centroid_rel:= connect(sepunit_unconnected_grids/Geometry, centroid);
+				parameter<Country_Settlements> closest_settlement:= #Country_Settlements > 0 ? connect(Country_Settlements/Geometry_wm, centroid) : 0;
 				attribute<Country_Settlements> dependent_point (sepunit_unconnected_grids):= const(closest_settlement, sepunit_unconnected_grids, Country_Settlements);
 			}
 			attribute<Country_Settlements> dependent (Add_Unconnected_Grids/all_grids) := #Country_Settlements > 0 ? Add_Unconnected_Grids/all_grids/dependent_point : 0;
