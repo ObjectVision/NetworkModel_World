@@ -459,6 +459,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			attribute<float32>         population  := Org/population[org_rel];
 			attribute<Countries>       Country_rel := Org/Country_rel[org_rel];
 			attribute<string>          Label       := Org/Label[org_rel];
+			attribute<uint32>		   Type	   	   := Org/Type[org_rel];
 		}
 		
 		unit<uint64> OD_matrix :=

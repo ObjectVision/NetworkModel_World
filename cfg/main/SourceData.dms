@@ -18,6 +18,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 			attribute<Continents>     continent_rel      := union_data(., villages/continent_rel, semidensetowns/continent_rel, towns/continent_rel, cities/continent_rel);
 			attribute<float32>     	  population         := float32(union_data(., villages/POP_2020, semidensetowns/POP_2020, towns/POP_2020, cities/POP_2020));
 			attribute<string>         Label              := MakeDefined(Countries/Label[country_rel],'None')+'_'+union_data(.,const('vill',villages,string),const('sdt',semidensetowns,string),const('town',towns,string),const('city',cities,string))+'_'+string(ID);
+			attribute<uint32>		  Type				 := union_data(., const(11, villages, uint32), const(22, semidensetowns, uint32), const(23, towns, uint32), const(30, cities, uint32));
 			parameter<string> 		  set				 := Settlements/set;
 		}
 		
