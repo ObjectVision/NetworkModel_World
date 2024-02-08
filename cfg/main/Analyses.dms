@@ -33,6 +33,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		);
 	
 	#include<Functional_Rural_Areas.dms>
+	#include<Accessibility.dms>
 	#include<Collect_Results.dms>
 	
 	Template Prepare_Catchments_T 
