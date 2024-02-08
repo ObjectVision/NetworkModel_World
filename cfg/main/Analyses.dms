@@ -511,6 +511,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		{
 			attribute<BaseProjection>        point : storagename = "= propvalue(Hierarchies_write/point, 'StorageName')", StorageReadOnly = "true";
 			attribute<Connected_Settlements> Connected_Settlements_rel := rlookup(Label, Connected_Settlements/Label);
+			attribute<uint32>				 Type					   := Connected_Settlements/Type[Connected_Settlements_rel];
 			attribute<FinalNodeSet>          NodeId                    := Connected_Settlements/NodeId[Connected_Settlements_rel];
 			attribute<string>                Label; //  := LabelText; // drop in later stage as Labels are stored since a previous revision.
 		}
