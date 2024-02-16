@@ -53,6 +53,7 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 			attribute<WGS84>        Geometry_LL (poly) := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry_LL)';
 			attribute<inCountries>  org_rel            := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', id(inCountries))';
 			attribute<WebMercator>  Geometry_WM (poly) := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry_WM)';
+			attribute<WorldMollweide>  Geometry_MW (poly) := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry_MW)';
 			
 			unit<uint32> border_points_LL   := sequence2points(Geometry_LL) 
 			{

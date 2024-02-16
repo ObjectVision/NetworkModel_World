@@ -1,8 +1,8 @@
 container Accessibility: using = "Units;Geometries;SourceData/RegionalUnits;" {
 
 	unit<uint32> variants: nrofrows = 6 {
-		attribute<string> label: ['villages', 'towns', 'cities', 'local_centres', 'regional_centres', 'national_centres'];
-		attribute<string> def: ['Country_Settlements/type > 10', 'Country_Settlements/type > 22', 'Country_Settlements/type > 29', 'bool(Country_Settlements/L_15min)', 'bool(Country_Settlements/L_30min)','bool(Country_Settlements/L_60min)'];
+		attribute<string> label: ['villages', 'towns', 'cities', 'loc_ctr', 'reg_ctr', 'nat_ctr'];
+		attribute<string> def: ['uint32(SelectedSettlements/type) > 10', 'uint32(SelectedSettlements/type) > 22', 'uint32(SelectedSettlements/type) > 29', 'bool(SelectedSettlements/L_15min)', 'bool(SelectedSettlements/L_30min)','bool(SelectedSettlements/L_60min)'];
 	}
 	
 	container Access_to_settlement_types:= 
@@ -36,6 +36,7 @@ container Accessibility: using = "Units;Geometries;SourceData/RegionalUnits;" {
 		{
 			attribute<BaseProjection> Geometry    := inSettlements/point;
 			attribute<string>         Label       := inSettlements/Label;
+			attribute<WebMercator> 	  centroid_wm := convert(Geometry, WebMercator);
 			attribute<WorldMollweide> centroid_mw := convert(Geometry, WorldMollweide);
 			attribute<FinalNodeSet>   NodeId      := inSettlements/NodeId;
 			attribute<float32>        Pop         := float32(inSettlements/Pop);
@@ -79,6 +80,20 @@ container Accessibility: using = "Units;Geometries;SourceData/RegionalUnits;" {
 		{
 			parameter<inCountries> inCountry;
 			
+			parameter<WorldMollweide> cntr_lb:= lower_bound(inCountries/Geometry_mw[inCountry]);			
+			parameter<WorldMollweide> cntr_ub:= upper_bound(inCountries/Geometry_mw[inCountry]);
+			parameter<WorldMollweide> gridsize:= GetProjectionFactor(SourceData/population/big_raster)[WorldMollweide];
+			//parameter<WorldMollweide> startpoint:= point(pointrow(cntr_ub), pointcol(cntr_lb), WorldMollweide);
+			parameter<WorldMollweide> startpoint:= cntr_lb;
+			parameter<ipoint> 		  cntr_rng_pt:= ((cntr_ub - cntr_lb) / gridsize)[ipoint] + point(1i, 1i, ipoint);
+			
+			unit<ipoint> country_grid:= range(gridset(WorldMollweide, gridsize, startpoint, ipoint), point(0i, 0i, ipoint), cntr_rng_pt) {
+				attribute<int32> x:= pointcol(id(.));
+				attribute<Collect_Results/all_grids> ag_rel:= invert(Collect_Results/all_grids/cg_rel);
+				
+			}
+			
+			
 			unit<uint32> sep_Country_Units := select_with_org_rel(in_sep_units/country_rel = inCountry) 
 			{
 				attribute<BaseProjection>     geometry (poly)    := in_sep_units/Geometry[org_rel];
@@ -89,17 +104,6 @@ container Accessibility: using = "Units;Geometries;SourceData/RegionalUnits;" {
 			unit<uint32> Rel_sep_country_units := subset(sep_Country_Units/any_grid) {
 				attribute<string>			 ZoneId:= sep_Country_Units/ZoneId[Nr_OrgEntity];
 			}
-			unit<uint32> Country_Settlements := select_with_org_rel(SelectedSettlements/Country_rel = inCountry) 
-			{
-				attribute<BaseProjection>     Geometry    := SelectedSettlements/Geometry[org_rel];
-				attribute<WorldMollweide>     Geometry_mw := SelectedSettlements/centroid_mw[org_rel];
-				attribute<WebMercator>		  Geometry_wm := Geometry_mw[WebMercator];
-				attribute<string>             Label       := SelectedSettlements/Label[org_rel];
-				attribute<float32>            Pop         := SelectedSettlements/Pop[org_rel];
-				attribute<FinalNodeSet>       NodeId      := SelectedSettlements/NodeId[org_rel];
-				attribute<uint32>			  type		  := SelectedSettlements/Type[org_rel];
-			}
-			
 			unit<uint32> Country_Unconnected_Grids := select_with_org_rel(Unconnected_Grids/country_rel = inCountry) 
 			{
 				attribute<WebMercator>        Geometry    := Unconnected_Grids/Geometry[org_rel];
@@ -132,39 +136,32 @@ container Accessibility: using = "Units;Geometries;SourceData/RegionalUnits;" {
 					, (sep_Country_Units/any_connection ? 'Add_Unconnected_Grids__wconn_T(' : 'Add_Unconnected_Grids__noconn_T(')+string(id(sep_Country_Units))+')'
 				) 
 				{
-					
-					parameter<string> exec_tt:= 'union_data(., Accessibility_Per_Variant/XXXX/Find_Only_Closest/tt_min, '+asitemlist(Rel_sep_country_units/ZoneId+'/tt_per_variant/XXXX')+')';
-					parameter<string> exec_td:= 'union_data(., Accessibility_Per_Variant/XXXX/Find_Only_Closest/td_km, '+asitemlist(Rel_sep_country_units/ZoneId+'/td_per_variant/XXXX')+')';
+					parameter<string> replace_line:= 'XXXX';
+					parameter<string> exec_tt:= 'union_data(all_grids, Accessibility_Per_Variant/'+replace_line+'/Find_Only_Closest/tt_min, '+asitemlist(Rel_sep_country_units/ZoneId+'/tt_per_variant/'+replace_line)+')';
+					parameter<string> exec_td:= 'union_data(all_grids, Accessibility_Per_Variant/'+replace_line+'/Find_Only_Closest/td_km, '+asitemlist(Rel_sep_country_units/ZoneId+'/td_per_variant/'+replace_line)+')';
 					
 					unit<uint32> all_grids:= ='union_unit(Country_Connected_Grids,'+asitemlist(Rel_sep_country_units/ZoneId+'/sepunit_unconnected_grids')+')' 
 					{
 						attribute<WebMercator>         geometry                 := ='union_data(., Country_Connected_Grids/Geometry, '+asitemlist(Rel_sep_country_units/ZoneId+'/sepunit_unconnected_grids/Geometry')+')';
 						attribute<WorldMollweide>      geometry_mw              := Geometry[WorldMollweide];
+						attribute<country_grid> 	   cg_rel                   := geometry_mw[country_grid];
 						
-						container tt_per_variant:= for_each_nedv(variants/label, exec_tt, all_grids, min_f);
-						container td_per_variant:= for_each_nedv(variants/label, exec_td, all_grids, km);
+						container tt_per_variant:= for_each_nedv(variants/label, replace(exec_tt, replace_line, variants/label), all_grids, min_f);
+						container td_per_variant:= for_each_nedv(variants/label, replace(exec_td, replace_line, variants/label), all_grids, km);
 						
 					}
 					
-					parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Accessibility/'+variants/label[invariant]+'/'+SourceData/Settlements/set+'/'+Continent_Name+'/'+inCountries/ZoneId[inCountry];
+					parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Accessibility/'+SourceData/Settlements/set+'/'+Continent_Name+'/'+inCountries/ZoneId[inCountry];
 					
-					unit<uint32> access_results:= all_grids
-					, DialogData = "point"
-					, DialogType = "map"
-					, StorageName = "= filepath+'.dbf'" 
-					{
-						attribute<WorldMollweide>  point 	   := cleaned_catchments/geometry_mw, StorageName = "= filepath+'.shp'";
-					}
-					
-					container store_times:= for_each_nedvn('t_'+variants/label, 'float32(all_grids/tt_per_variant/'+variants/label+')', all_grids, float32, filepath+'.dbf');
-					container store_distances:= for_each_nedvn('d_'+variants/label, 'float32(all_grids/td_per_variant/'+variants/label+')', all_grids, float32, filepath+'.dbf');
+					container store_times:= for_each_nedva(const('t_',variants,string)+variants/label, 'float32(all_grids/tt_per_variant/'+variants/label+')[country_grid/ag_rel]', country_grid, float32,filepath+'/tt/'+variants/Label+'.tif');
+					container store_distances:= for_each_nedva(const('d_',variants,string)+variants/label, 'float32(all_grids/td_per_variant/'+variants/label+')[country_grid/ag_rel]', country_grid, float32,filepath+'/td/'+variants/Label+'.tif');
 				}
 			
-				parameter<bool> store_file:= true, ExplicitSuppliers = "Collect_Results/access_results;Collect_Results/store_times;Collect_Results/store_distances;";
+				parameter<bool> store_file:= true, ExplicitSuppliers = "Collect_Results/store_times;Collect_Results/store_distances;";
 				
 				
 				unit<uint32> all_catchments_readonly 
-				: StorageName = "= propvalue(Collect_Results/access_results/point, 'StorageName')"
+				: StorageName = "= Collect_Results/filepath+'.shp'"
 				, StorageType = "gdal.vect"
 				, StorageReadOnly = "True" 
 				{
@@ -175,12 +172,12 @@ container Accessibility: using = "Units;Geometries;SourceData/RegionalUnits;" {
 		Template Access_per_dest_variant_T {
 			parameter<variants> invariant;
 			
-			unit<uint32> Variant_Destinations:= ='select_with_org_rel('+variants/def[invariant]+')' {
-				attribute<WebMercator> 	Geometry    := Country_settlements/Geometry[Nr_OrgEntity];
-				attribute<string>       Label       := Country_settlements/Label[org_rel];
-				attribute<float32>      Pop         := Country_settlements/Pop[org_rel];
-				attribute<FinalNodeSet> NodeId      := Country_settlements/NodeId[org_rel];
-				attribute<uint32>		type		:= Country_settlements/Type[org_rel];
+			unit<uint32> Variant_Destinations:= ='select_with_org_rel('+variants/def[invariant]+' && SelectedSettlements/country_rel = inCountry)' {
+				attribute<WebMercator> 	Geometry    := SelectedSettlements/centroid_wm[org_rel];
+				attribute<string>       Label       := SelectedSettlements/Label[org_rel];
+				attribute<float32>      Pop         := SelectedSettlements/Pop[org_rel];
+				attribute<FinalNodeSet> NodeId      := SelectedSettlements/NodeId[org_rel];
+				attribute<uint32>		type		:= SelectedSettlements/Type[org_rel];
 			}
 			
 			container Find_Only_Closest 
@@ -204,7 +201,7 @@ container Accessibility: using = "Units;Geometries;SourceData/RegionalUnits;" {
 						, Variant_Destinations/NodeId
 					);
 				attribute<min_f> proto_tt_min (Country_Connected_Grids):= (Closest_TravelTime[Country_Connected_Grids/NodeId])[min_f];
-				attribute<km> 	 proto_td_km  (Country_Connected_Grids):= (Closest_TravelDistance[Country_Connected_Grids/NodeId])[min_f];
+				attribute<km> 	 proto_td_km  (Country_Connected_Grids):= (Closest_TravelDistance[Country_Connected_Grids/NodeId]);
 				
 				unit<uint32> with_values:= subset(isdefined(proto_tt_min)) {
 					attribute<WebMercator> Geometry:= Country_Connected_Grids/Geometry[Nr_OrgEntity]; 
@@ -218,8 +215,8 @@ container Accessibility: using = "Units;Geometries;SourceData/RegionalUnits;" {
 					attribute<km> 	 td_val:= with_values/td_val[wi_rel];
 				}
 				attribute<without_values> wv_rel (Country_Connected_Grids):= invert(without_values/Nr_OrgEntity);
-				attribute<min_f> tt_min (Country_Connected_Grids):= #with_values > 0 ? makedefined(proto_tt_min, without_values/tt_val[wv_rel]) : 0 / 0;
-				attribute<km> td_km    (Country_Connected_Grids):= #with_values > 0 ? makedefined(proto_td_km, without_values/td_val[wv_rel]) : 0 / 0;
+				attribute<min_f> tt_min (Country_Connected_Grids):= #with_values > 0 ? makedefined(proto_tt_min, without_values/tt_val[wv_rel]) : 0d / 0d;
+				attribute<km> td_km    (Country_Connected_Grids):= #with_values > 0 ? makedefined(proto_td_km, without_values/td_val[wv_rel]) : 0d / 0d;
 			}
 		}	
 		
@@ -231,14 +228,14 @@ container Accessibility: using = "Units;Geometries;SourceData/RegionalUnits;" {
 			{
 				attribute<WebMercator> Geometry:= Country_Unconnected_Grids/Geometry[org_rel]; 
 				attribute<sepunit_connected_grids> scg_rel:= connect(sepunit_connected_grids/Geometry, sepunit_unconnected_grids/Geometry);
-				attribute<km>	 scg_dist:= dist(Geometry, sepunit_connected_grids/Geometry[scg_rel])[km];
+				attribute<km>	 scg_dist:= convert(dist(Geometry, sepunit_connected_grids/Geometry[scg_rel])[m], km);
 			}
 			unit<uint32> sepunit_connected_grids   := select_with_org_rel(Country_Connected_Grids/scu_rel = in_sep_unit_nr) 
 			{
 				attribute<WebMercator>  Geometry  := Country_Connected_Grids/Geometry[org_rel]; 
 				
-				container tt_per_variant:= for_each_nedv(variants/label, 'Accessibility_Per_Variant/'+variants/label+'/Find_Only_Closest/tt_min', sepunit_connected_grids, min_f);
-				container td_per_variant:= for_each_nedv(variants/label, 'Accessibility_Per_Variant/'+variants/label+'/Find_Only_Closest/td_km', sepunit_connected_grids, km);
+				container tt_per_variant:= for_each_nedv(variants/label, 'Accessibility_Per_Variant/'+variants/label+'/Find_Only_Closest/tt_min[org_rel]', sepunit_connected_grids, min_f);
+				container td_per_variant:= for_each_nedv(variants/label, 'Accessibility_Per_Variant/'+variants/label+'/Find_Only_Closest/td_km[org_rel]', sepunit_connected_grids, km);
 			}
 			
 			container tt_per_variant:= for_each_nedv(variants/label, 'sepunit_connected_grids/tt_per_variant/'+variants/label+'[sepunit_unconnected_grids/scg_rel] + (sepunit_unconnected_grids/scg_dist / ModelParameters/Advanced/CarDefaultSpeed_low)[min_f]', sepunit_unconnected_grids, min_f);
@@ -253,7 +250,7 @@ container Accessibility: using = "Units;Geometries;SourceData/RegionalUnits;" {
 			{
 				attribute<Geometries/WebMercator> 	Geometry:= Country_Unconnected_Grids/Geometry[org_rel]; 
 				attribute<Country_Connected_Grids> 	ccg_rel:= connect(Country_Connected_Grids/Geometry, Geometry);
-				attribute<km>	 					ccg_dist:= dist(Geometry, sepunit_connected_grids/Geometry[scg_rel])[km];
+				attribute<km>	 					ccg_dist:= convert(dist(Geometry, Country_Connected_Grids/Geometry[ccg_rel])[m], km);
 			}
 			container tt_per_variant:= for_each_nedv(variants/label, 'Accessibility_Per_Variant/'+variants/label+'/Find_Only_Closest/tt_min[sepunit_unconnected_grids/ccg_rel] + (sepunit_unconnected_grids/ccg_dist / ModelParameters/Advanced/CarDefaultSpeed_low)[min_f]', sepunit_unconnected_grids, min_f);
 			container td_per_variant:= for_each_nedv(variants/label, 'Accessibility_Per_Variant/'+variants/label+'/Find_Only_Closest/td_km[sepunit_unconnected_grids/ccg_rel] + (sepunit_unconnected_grids/ccg_dist)', sepunit_unconnected_grids, km);
