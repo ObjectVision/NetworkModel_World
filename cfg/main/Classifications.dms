@@ -12,4 +12,12 @@ container Classifications: Using = "Units"
 		attribute<string> label := name;
 		container V := for_each_nedv(AsItemName(name), String(ID(.))+'[..]', void, .);
 	}
+	unit<uint32> Centres_Thresholds: nrofrows = 25 
+	{
+		attribute<min_f>   num     := (float32(id(.)) * 5f)[min_f];
+		attribute<s_f> 	   num_s_f := convert(num, s_f);
+		attribute<string>  padnum  := num < 10[min_f] ? '0' + string(num) : string(num);
+		attribute<string>  ns      := string(num_s_f)+'f';
+		attribute<string>  name    := 'L_'+padnum+'min';
+	}
 }

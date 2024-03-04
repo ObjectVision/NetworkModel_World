@@ -68,10 +68,70 @@ container collect_results: using = "Units;Geometries;SourceData/RegionalUnits;" 
 			}	
 		}
 	}
+	container access_grids: using="Analyses/Accessibility;" {
+		
+		unit<uint32> basevars:= Analyses/Accessibility/variants;
+		unit<uint32> variants:= union_unit(basevars, basevars) {
+			attribute<string> LabelText:= filename + '_' + indicator;
+			attribute<string> filename:= union_data(., basevars/label, basevars/label);
+			attribute<string> indicator:= id(.) < #basevars ? 'td' : 'tt';
+			attribute<bool>   storeresults:= ='union_data(., '+asitemlist('areas_per_variant/'+LabelText+'/loadfiles/combined_storage/store')+')';
+		}
+		
+		// E:\LocalData\networkmodel_world\Settlement_Accessibility\SMOD_V1s6_opr_P2023_v1_2020\Africa\AGO\tt
+		
+		container areas_per_variant:= for_each_ne(variants/LabelText, 'results_per_variant('+string(id(variants))+')');
+		
+		Template results_per_variant {
+			parameter<variants> inVariant;
+			
+			parameter<string> 	  pathbit:= '%LocalDataProjDir%/Settlement_Accessibility/'+SourceData/Settlements/set;
+			unit<uint32> all_countries:= countries {
+				
+				attribute<string> reference:= MakeDefined(pathbit+'/'+Continents/Name[continents_rel]+'/'+ZoneId+'/'+variants/indicator[inVariant]+'/'+variants/filename[inVariant]+'.tif', xx); 
+				attribute<bool>	results_available:= ='union_data(.,'+asitemlist('checkfiles/'+ZoneId)+')';
+				
+				container checkfiles:= for_each_nedv(ZoneId, 'strcount(ExistingFile(xx, reference['+string(id(all_countries))+']), xx) < 1', void, bool);
+			
+			}
+			unit<uint32> countries_with_results:= subset(all_countries/results_available) {
+				attribute<WorldMollweide> Geom (poly):= all_countries/Geometry_MW[Nr_OrgEntity];
+				attribute<string> ZoneId:= all_countries/ZoneId[nr_orgentity];
+				attribute<string> Continent:= Continents/Name[all_countries/continents_rel[Nr_OrgEntity]];
+				attribute<string> filepath:= all_countries/reference[nr_orgentity];
+			}
+			container loadfiles:= for_each_ne(countries_with_results/Continent+'_'+countries_with_results/ZoneId, 'load_tiffs('+quote(countries_with_results/filepath)+')') {
+				container combined_storage {
+					//attribute<uint16>  cwr_rel (SourceData/population/big_raster):= poly2grid(countries_with_results/Geom, SourceData/population/big_raster)[uint16];
+					attribute<uint16>  cwr_rel (SourceData/population/big_raster):= uint16(rlookup(SourceData/RegionalUnits/Sep_units/country_rel, countries_with_results/Nr_OrgEntity)[SourceData/population/big_raster/sep_unit_rel]);
+					attribute<float32> mozaik_float32 (SourceData/population/big_raster):= ='raster_merge(cwr_rel, float32, '+asitemlist(countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/GridData')+')',
+						storagename = "= pathbit+'/_mozaiks/'+variants/LabelText[inVariant]+'_float32.tif'";
+					attribute<uint8> mozaik_uint8 (SourceData/population/big_raster):= ='raster_merge(cwr_rel, uint8, '+asitemlist(countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/Data_uint8')+')',
+						storagename = "= pathbit+'/_mozaiks/'+variants/LabelText[inVariant]+'_uint8.tif'";
+					parameter<bool> store:= True, ExplicitSuppliers = "mozaik_uint8;";
+				//	unit<uint32> all_catchments:= ='union_unit('+asitemlist(countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile')+')', storagename = "= pathbit+'/mozaik/all_ran.dbf'" {
+				//		attribute<WorldMollweide> 	Geometry (poly):= ='union_data(.,'+asitemlist(countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/Geometry')+')', storagename = "= pathbit+'/mozaik/all_ran.shp'";
+				//		attribute<float32> 			pop:= ='union_data(.,'+asitemlist('float32('+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/pop)')+')';
+				//		attribute<string>			Country:= ='union_data(.,'+asitemlist('const('+quote(countries_with_results/ZoneId)+', '+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile, string)')+')';
+				//		attribute<string>			Name:= ='union_data(.,'+asitemlist('('+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/Name)')+')';
+				//		attribute<uint32>			Def:= ='union_data(.,'+asitemlist('uint32('+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/Def)')+')';
+				//		attribute<uint32>			Iter:= ='union_data(.,'+asitemlist('uint32('+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/Iter)')+')';
+				//	}
+				}
+			}	
+		}
+	}
 	Template load_polygons {
 		parameter<string> inPath;
 		unit<uint32> inFile: storagename = "= inPath", storagereadonly = "True", storagetype = "gdal.vect" {
 			attribute<WorldMollweide> Geometry (poly);
+		}
+	}
+	Template load_tiffs {
+		parameter<string> inPath;
+		unit<wpoint> inFile: storagename = "= inPath", storagereadonly = "True", storagetype = "gdal.grid", dialogdata = "WorldMollweide" {
+			attribute<float32> GridData;
+			attribute<uint8>   Data_uint8:= uint8(min_elem(GridData, 100f));
 		}
 	}
 

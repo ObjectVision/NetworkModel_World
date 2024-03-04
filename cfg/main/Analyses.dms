@@ -1,20 +1,18 @@
 container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceData/RegionalUnits" 
 {  
-	unit<uint32> thresholds: nrofrows = 25 
-	{
-		attribute<min_f>   num     := (float32(id(.)) * 5f)[min_f];
-		attribute<s_f> 	   num_s_f := convert(num, s_f);
-		attribute<string>  padnum  := num < 10[min_f] ? '0' + string(num) : string(num);
-		attribute<string>  ns      := string(num_s_f)+'f';
-		attribute<string>  name    := 'L_'+padnum+'min';
-	}
-	
+	container Settlements_Per_Continent :=
+	 for_each_ne(
+		Continents/name
+		, 'NetworkSetup/selSettlements_Per_Continent_T(SourceData/Settlements/all_settlements,'+quote(Continents/name)+')'
+	);
+
+
 	container Obtain_Settlement_Hierarchies:= 
 		for_each_ne(
 			Continents/Name
 			,'Settlement_Hierarchy_T('+quote(Continents/label)+
-				', NetworkSetup/Settlements_Per_Continent/'+Continents/name+'/Select'    //orgs
-				', NetworkSetup/Settlements_Per_Continent/'+Continents/name+'/Select'  
+				', Settlements_Per_Continent/'+Continents/name+'/Select'    //orgs
+				', Settlements_Per_Continent/'+Continents/name+'/Select'  
 				', NetworkSetup/Per_Continent/'+Continents/Name+'/NetwerkSpec/CreateMoreEfficientNetwork'
 			')'
 		);
@@ -28,7 +26,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				', NetworkSetup/GridPoints_Per_Continent/'+Continents/name+'/Countries' 
 				', NetworkSetup/GridPoints_Per_Continent/'+Continents/name+'/sep_units' 
 				', NetworkSetup/Per_Continent/'+Continents/Name+'/NetwerkSpec/CreateMoreEfficientNetwork'
-				', 6[thresholds], 50000[float32]'
+				', 6[Centres_Thresholds], 50000[float32]'
 			')'
 		);
 	
@@ -44,13 +42,13 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		unit<uint32>          inCountries;
 		unit<uint32>          in_sep_units;
 		container             NetwerkSpec;
-		parameter<thresholds> inThreshold;
+		parameter<Centres_Thresholds> inThreshold;
 		parameter<float32>    minPop;
 		
 		unit<uint32> FinalLinkSet := NetwerkSpec/FinalLinkSet_Read;
 		unit<uint32> FinalNodeSet := NetwerkSpec/FinalNodeSet_Read;
 	
-		unit<uint32> SelectedSettlements:= = 'select_with_org_rel(bool(inSettlements/'+thresholds/name[inThreshold]+') && float32(inSettlements/Pop) >= minPop)' // && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))' : 'subset(float32(Localcentres_ReadOnly/size) > 0f && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))'" {
+		unit<uint32> SelectedSettlements:= = 'select_with_org_rel(bool(inSettlements/'+Centres_Thresholds/name[inThreshold]+') && float32(inSettlements/Pop) >= minPop)' // && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))' : 'subset(float32(Localcentres_ReadOnly/size) > 0f && (!FUA_exclusion || !Localcentres_ReadOnly/inFUA))'" {
 		{
 			attribute<BaseProjection> Geometry    := inSettlements/point[org_rel];
 			attribute<string>         Label       := inSettlements/Label[org_rel];
@@ -398,7 +396,8 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				attribute<Country_Settlements>  biggest_settlement := MakeDefined(Values, max_index(Country_Settlements/Pop, Catchment_Id));
 			}
 			
-			parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Catchments/'+thresholds/name[inThreshold]+'_pop'+string(minPop / 1000f)+'/'+Continent_Name+'/'+inCountries/ZoneId[inCountry];
+			parameter<string> settlements_refname:= ='Analyses/Settlements_Per_Continent/'+Continent_name+'/select/refname';
+			parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Catchments/'+settlements_refname+'/'+Centres_Thresholds/name[inThreshold]+'_pop'+string(minPop / 1000f)+'/'+Continent_Name+'/'+inCountries/ZoneId[inCountry];
 			
 			parameter<bool> store_catchment:= true, ExplicitSuppliers = "all_catchments;";
 			
@@ -472,19 +471,19 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 				, !FinalLinkSet/IsOneDirection
 				, Connected_Settlements/NodeId 
 				, Connected_Settlements/NodeId 
-				, convert(max(thresholds/num), s_f) //cut impedance
+				, convert(max(Centres_Thresholds/num), s_f) //cut impedance
 			) 
 		{
 			attribute<float32> pop_i:= Connected_Settlements/population[OrgZone_rel];
 			attribute<float32> pop_j:= Connected_Settlements/population[DstZone_rel];
 		}
 			
-		parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Hierarchy/'+Continent_Name;
+		parameter<string> filepath:= '%LocalDataProjDir%/Settlement_Hierarchy/'+Org/refname+'/'+Continent_Name;
 		
 		container biggest_centre:= 
 			for_each_nedva(
-				thresholds/name
-				, 'uint32(id(Connected_Settlements) = OD_matrix/DstZone_rel[max_index(OD_matrix/pop_j * float32(float32(OD_matrix/impedance) <= '+thresholds/ns+'), OD_matrix/OrgZone_rel)])'
+				Centres_Thresholds/name
+				, 'uint32(id(Connected_Settlements) = OD_matrix/DstZone_rel[max_index(OD_matrix/pop_j * float32(float32(OD_matrix/impedance) <= '+Centres_Thresholds/ns+'), OD_matrix/OrgZone_rel)])'
 				, Connected_Settlements
 				, uint32
 				, filepath+'.dbf'
@@ -501,7 +500,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			attribute<uint32>         CountryId   := Country_rel;
 			attribute<string>         Country     := Countries/Label[Country_rel];
 			attribute<float32>        Pop         := population;
-			attribute<uint32>         Maxl        := = 'max_elem('+AsItemList('(biggest_centre/'+thresholds/name+' * uint32('+string(thresholds/num)+'))')+')';
+			attribute<uint32>         Maxl        := = 'max_elem('+AsItemList('(biggest_centre/'+Centres_Thresholds/name+' * uint32('+string(Centres_Thresholds/num)+'))')+')';
 		}
 			
 		unit<uint32> Hierarchies_ReadOnly 

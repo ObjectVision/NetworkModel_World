@@ -3,7 +3,7 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 	container Settlements_Per_Continent :=
 		for_each_ne(
 			Continents/name
-			, 'selSettlements_Per_Continent_T(SourceData/Settlements/all_Settlements,'+quote(Continents/name)+')'
+			, 'selSettlements_Per_Continent_T(SourceData/Settlements/unioned_settlements,'+quote(Continents/name)+')'
 		);
 		
 	container GridPoints_Per_Continent := 

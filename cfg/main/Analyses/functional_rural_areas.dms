@@ -31,7 +31,7 @@ container Functional_Rural_Areas: using = "Units;Geometries;SourceData/RegionalU
 		
 		
 		container iterate_by_Memberstates:= for_each_ne(region_unit/ZoneId, 'iterate_areas('+quote(region_unit/ZoneId)+')') {
-			parameter<string> inThreshold:= thresholds/name[CatchmentPrep/inThreshold];
+			parameter<string> inThreshold:= Centres_Thresholds/name[CatchmentPrep/inThreshold];
 		}
 	}
 	
@@ -161,10 +161,13 @@ container Functional_Rural_Areas: using = "Units;Geometries;SourceData/RegionalU
 			parameter<tt_aggregation_method> tt_agg:= variants/agg_m[inVariant];
 			
 			container Accumulate_Areas:= loop(AreaAccumulator, uint16(min_elem(#Areas, 100)));
-				
+			
+			parameter<string> settlements_refname:= ='Analyses/Settlements_Per_Continent/'+Continent_name+'/select/refname';
+			parameter<string> filepath:= '%LocalDataProjDir%/Functional_Rural_Areas/'+settlements_refname+'/Base_'+inThreshold+'/'+variants/LabelText[inVariant]+'/'+Continent_name+'/'+inCountry;
+			
 			container StoreAreas {
-				unit<uint32> AreaCll:= subset(Accumulate_Areas/lastIter/nextValue/Collect/IterAreas/iter_unfinished), StorageName = "='%LocalDataProjDir%/Functional_Rural_Areas/Base_'+inThreshold+'/'+variants/LabelText[inVariant]+'/'+Continent_name+'/'+inCountry+'.dbf'" {
-					attribute<WorldMollweide> Geometry (polygon):= Accumulate_Areas/lastIter/nextValue/Collect/IterAreas/Geometry[Nr_OrgEntity], StorageName = "='%LocalDataProjDir%/Functional_Rural_Areas/Base_'+inThreshold+'/'+variants/LabelText[inVariant]+'/'+Continent_name+'/'+inCountry+'.shp'";
+				unit<uint32> AreaCll:= subset(Accumulate_Areas/lastIter/nextValue/Collect/IterAreas/iter_unfinished), StorageName = "=filepath+'.dbf'" {
+					attribute<WorldMollweide> Geometry (polygon):= Accumulate_Areas/lastIter/nextValue/Collect/IterAreas/Geometry[Nr_OrgEntity], StorageName = "=filepath+'.shp'";
 					attribute<string>	 Name:= replace(Accumulate_Areas/lastIter/nextValue/Collect/IterAreas/Name[Nr_OrgEntity], ' / ', ', ') ;
 					attribute<string>	 Category:= Accumulate_Areas/lastIter/nextValue/Collect/IterAreas/Category[Nr_OrgEntity];
 					attribute<float32>	 Pop:= Accumulate_Areas/lastIter/nextValue/Collect/IterAreas/Pop[Nr_OrgEntity];
