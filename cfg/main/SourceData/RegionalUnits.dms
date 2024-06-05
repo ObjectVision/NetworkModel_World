@@ -1,5 +1,14 @@
 container RegionalUnits : using = "geometries"
 { 	
+	unit<uint32> FUAs
+	: storagename = "%NetworkModelWorld_DataDir%/Regions/FUAs/FUAs_EU_US_ESPON_OECD_4326.shp"
+	, storagetype = "gdal.vect"
+	, storagereadonly = "True" 
+	{
+		attribute<wgs84> 	Geometry (poly);
+		attribute<string>   ZoneId:= FUA_ID; 
+		attribute<string> 	Label:= FUA_NAME;
+	}
 	unit<uint32> Countries
 	: storagename = "= propvalue(store_Countries, 'StorageName')"
 	, StorageReadOnly = "True"
@@ -29,6 +38,13 @@ container RegionalUnits : using = "geometries"
 		attribute<string> label           := Classifications/Continents/label;
 		
 		container V := for_each_nedv(AsItemName(name), String(ID(.))+'[..]', void, .);
+		
+		unit<uint8> export_continents:= Continents, storagename = "%localdataprojdir%/export/continents.dbf" {
+			attribute<wgs84> Geometry (poly):= Continents/Geometry, storagename = "%localdataprojdir%/export/continents.shp";
+			attribute<string> ZoneId:= Continents/name;
+			attribute<string> Label:= Continents/Label;
+		}
+		
 	}
 	unit<uint32> store_sep_units:= split_polygon(Countries/Geometry[BaseProjection_ip]), descr = "separated polygons that entail a country."
 		, storagename = "%NetworkModelWorld_DataDir%/Regions/fss/sep_units.fss"
@@ -53,6 +69,13 @@ container RegionalUnits : using = "geometries"
 		attribute<string> Label:= inMatrix/data[(id(.)*3+1)[inMatrix]];
 		attribute<string> Continent:= inMatrix/data[(id(.)*3+2)[inMatrix]];
 		attribute<wgs84>  Geometry (poly):= makedefined(rjoin(ZoneId, ciesin_countries/GID_0, ciesin_countries/Geometry), rjoin(ZoneId, russian_units/GID_0, russian_units/Geometry));
+		
+		unit<uint32> export_countries:= set_countries, storagename = "%localdataprojdir%/export/countries.dbf" {
+			attribute<wgs84> Geometry (poly):= set_countries/Geometry, storagename = "%localdataprojdir%/export/countries.shp";
+			attribute<string> ZoneId:= set_countries/ZoneId;
+			attribute<string> Label:= set_countries/Label;
+			attribute<string> Continent:= set_countries/Continent;
+		}
 		
 		unit<uint32> ciesin_countries: storagename = "%NetworkModelWorld_DataDir%/Regions/Global_admin0.shp", storagetype = "gdal.vect", storagereadonly = "true" {
 			attribute<wgs84> Geometry (poly);

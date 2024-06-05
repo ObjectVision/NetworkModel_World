@@ -9,6 +9,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 		
 		unit<uint32> sett_sets: nrofrows = 2 {
 			attribute<string> label: ['SMOD_V1s6_opr_P2023_v1_2000', 'SMOD_V1s6_opr_P2023_v1_2020'];
+			attribute<string> popdef: ['POP_2000', 'POP_2020'];
 		}
 		
 		container all_settlement_sets:= for_each_ne(sett_sets/label, 'make_Settlement_Sets('+string(id(sett_sets))+')');
@@ -32,18 +33,20 @@ container SourceData: Using = "Units;Classifications;geometries"
 			
 			parameter<sett_sets> inSetRel;
 			parameter<string> set:= sett_sets/label[inSetRel];
+			parameter<string> popdef:= sett_sets/popdef[inSetRel];
 			
 			unit<uint32> all_settlements:= union_unit(villages, semidensetowns, towns, cities), dialogdata = "geometry_LL", dialogtype = "map" 
 			{
 				attribute<WorldMollweide> geometry    (poly) := union_data(., villages/geometry, semidensetowns/geometry, towns/geometry, cities/geometry);
 				attribute<WGS84>          geometry_LL (poly) := union_data(., villages/geometry_LL, semidensetowns/geometry_LL, towns/geometry_LL, cities/geometry_LL);
 				attribute<int32>          ID                 := union_data(., villages/ID, semidensetowns/ID, towns/ID, cities/ID);
+				attribute<string>         Label              := union_data(., villages/Label, semidensetowns/Label, towns/Label, cities/Label);
 				attribute<WGS84>          centroid           := union_data(., villages/centroid, semidensetowns/centroid, towns/centroid, cities/centroid);
 				attribute<Countries>      country_rel        := point_in_polygon(centroid, Countries/Geometry);
 				attribute<Continents>     continent_rel      := union_data(., villages/continent_rel, semidensetowns/continent_rel, towns/continent_rel, cities/continent_rel);
-				attribute<float32>     	  population         := float32(union_data(., villages/POP_2020, semidensetowns/POP_2020, towns/POP_2020, cities/POP_2020));
-				attribute<string>         Label              := MakeDefined(Countries/Label[country_rel],'None')+'_'+union_data(.,const('vill',villages,string),const('sdt',semidensetowns,string),const('town',towns,string),const('city',cities,string))+'_'+string(ID);
-				attribute<uint32>		  Type				 := union_data(., const(11, villages, uint32), const(22, semidensetowns, uint32), const(23, towns, uint32), const(30, cities, uint32));
+				attribute<float32>     	  population         := float32(union_data(., villages/popval, semidensetowns/popval, towns/popval, cities/popval));
+				//attribute<string>         Label              := MakeDefined(Countries/Label[country_rel],'None')+'_'+union_data(.,const('vill',villages,string),const('sdt',semidensetowns,string),const('town',towns,string),const('city',cities,string))+'_'+string(ID);
+				attribute<uint32>		  Type				 := union_data(., const(13, villages, uint32), const(22, semidensetowns, uint32), const(23, towns, uint32), const(30, cities, uint32));
 				parameter<string> 		  set				 := Settlements/set;
 			}
 			
@@ -58,6 +61,8 @@ container SourceData: Using = "Units;Classifications;geometries"
 				attribute<WorldMollweide> geometry    (poly);
 				attribute<WGS84>          geometry_LL (poly) :=  convert(geometry, WGS84);
 				attribute<int32>          ID                 := ID_RC_G0;
+				attribute<string>		  Label			     := 'RC___'+string(ID);
+				attribute<float32>	      popval			 := ='float32('+popdef+')';
 				attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/villages/type/id, CalcCentroids/read/villages/type/centroid);
 				attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/villages/type/id, CalcCentroids/read/villages/type/continent_rel);
 			}
@@ -72,6 +77,8 @@ container SourceData: Using = "Units;Classifications;geometries"
 				attribute<WorldMollweide> geometry    (poly);
 				attribute<WGS84>          geometry_LL (poly) :=  convert(geometry, WGS84);
 				attribute<int32>          ID                 := ID_SDUC_G0;
+				attribute<string>		  Label			     := 'SDUC_'+string(ID);
+				attribute<float32>	      popval			 := ='float32('+popdef+')';
 				attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/semidensetowns/type/id, CalcCentroids/read/semidensetowns/type/centroid);
 				attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/semidensetowns/type/id, CalcCentroids/read/semidensetowns/type/continent_rel);
 				
@@ -92,6 +99,8 @@ container SourceData: Using = "Units;Classifications;geometries"
 				// attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
 				attribute<WGS84>          geometry_LL (poly) :=  convert(geometry, WGS84);
 				attribute<int32>          ID                 := ID_DUC_G0;
+				attribute<string>		  Label			     := 'DUC__'+string(ID);
+				attribute<float32>	      popval			 := ='float32('+popdef+')';
 				attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/towns/type/id, CalcCentroids/read/towns/type/centroid);
 				attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/towns/type/id, CalcCentroids/read/towns/type/continent_rel);
 				
@@ -112,6 +121,8 @@ container SourceData: Using = "Units;Classifications;geometries"
 				// attribute<WGS84>          geometry_LL (poly) :=  points2sequence(xy_to_yx/point_yx, xy_to_yx/Sequence_rel);
 				attribute<WGS84>          geometry_LL (poly) :=  convert(geometry, WGS84);
 				attribute<int32>          ID                 := ID_UC_G0;
+				attribute<string>		  Label			     := 'UC___'+string(ID);
+				attribute<float32>	      popval			 := ='float32('+popdef+')';
 				attribute<WGS84>          centroid           := rjoin(ID, CalcCentroids/read/cities/type/id, CalcCentroids/read/cities/type/centroid);
 				attribute<Continents>     continent_rel      := rjoin(ID, CalcCentroids/read/cities/type/id, CalcCentroids/read/cities/type/continent_rel);
 				
