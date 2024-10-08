@@ -153,11 +153,11 @@ container SourceData: Using = "Units;Classifications;geometries"
 					parameter<string> SettlementType_name;
 					///
 					
-					unit<uint32> type := ='Settlements/'+SettlementType_name
+					unit<uint32> type := =set+'/'+SettlementType_name
 					, StorageName = "='%NetworkModelWorld_DataDir%/Settlements/'+set+'/'+SettlementType_name+'_centroid_Pop-'+Population/gridsize+'m.fss'"
 					{
 						attribute<WGS84>          centroid           := CalcPopCentroids/CalcPopCentroids/geometry;
-						attribute<int32>          ID                 := ='Settlements/'+SettlementType_name+'/ID';
+						attribute<int32>          ID                 := =set+'/'+SettlementType_name+'/ID';
 						attribute<Continents>     continent_rel      := ='point_in_polygon(centroid, continents/geometry)';
 
 						container CalcPopCentroids := CalcPopCentroids_T(.), DisableStorage = "TRUE";
