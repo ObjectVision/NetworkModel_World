@@ -37,6 +37,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 	}
 	#include<Functional_Rural_Areas.dms>
 	#include<Accessibility.dms>
+	#include<road_lengths.dms>
 	#include<Collect_Results.dms>
 	
 	Template Prepare_Catchments_T 
@@ -68,6 +69,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		
 		unit<uint32> grids_fua_check:= inGrids {attribute<bool> InFUA:= isdefined(point_in_polygon(inGrids/centroid, SourceData/RegionalUnits/FUAs/Geometry));}
 		
+		attribute<bool> 		   restrict_in_country	   (inGrids) := !FUA_exclusion || isdefined(point_in_polygon(inGrids/centroid, Country_Outlines/geometry));
 		attribute<BaseProjection>  inGrids_centroid_wgs    (inGrids) := inGrids/centroid;
 		attribute<WebMercator>     inGrids_centroid_wm     (inGrids) := convert(inGrids_centroid_wgs, WebMercator);
 		
@@ -75,7 +77,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		attribute<bool>         Close_enough        (inGrids) := dist(inGrids_centroid_wm, FinalNodeSet/geometry[Closest_node]) < 100d;
 		attribute<FinalNodeSet> Dest_NodeId         (inGrids) := Close_enough ? Closest_node : const(0 / 0, inGrids, FinalNodeSet);
 		
-		unit<uint32> Unconnected_Grids:= select_with_org_rel(IsNull(Dest_NodeId) && (!FUA_exclusion || !grids_fua_check/InFUA))
+		unit<uint32> Unconnected_Grids:= select_with_org_rel(IsNull(Dest_NodeId) && (!FUA_exclusion || !grids_fua_check/InFUA) && restrict_in_country)
 		{
 			attribute<WebMercator>      Geometry     := inGrids_centroid_wm[org_rel];
 			attribute<BaseProjection>   geometry_LL  := inGrids/centroid[org_rel];
@@ -84,7 +86,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 			attribute<float32>          Pop          := inGrids/population[org_rel];
 		}
 		
-		unit<uint32> Connected_Grids:= select_with_org_rel(IsDefined(Dest_NodeId) && (!FUA_exclusion || !grids_fua_check/InFUA)) 
+		unit<uint32> Connected_Grids:= select_with_org_rel(IsDefined(Dest_NodeId) && (!FUA_exclusion || !grids_fua_check/InFUA) && restrict_in_country) 
 		{
 			attribute<WebMercator>      Geometry     := inGrids_centroid_wm[org_rel];
 			attribute<BaseProjection>   geometry_LL  := inGrids/centroid[org_rel];

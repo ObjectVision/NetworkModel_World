@@ -35,12 +35,12 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 		
 		unit<uint32> Select:= range(uint32, 0, uint32(#Select_ui64)), dialogdata = "centroid", dialogtype = "map" 
 		{
-			attribute<ipoint>              org_rel         := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/org_rel)';
-			attribute<WGS84>               centroid        := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/centroid)';
+			attribute<ipoint>              org_rel         := ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/org_rel)';
+			attribute<WGS84>               centroid        := ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/centroid)';
 			// attribute<WebMercator>         centroid_wm     := convert(point(PointCol(centroid), PointRow(centroid))[WGS84], WebMercator);
 			attribute<WebMercator>         centroid_wm     := convert(centroid, WebMercator);
-			attribute<float32>             population      := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)[float32]';
-			attribute<inCountry_Sep_Units> allsepunits_rel := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/Sep_unit_rel)';
+			attribute<float32>             population      := ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)[float32]';
+			attribute<inCountry_Sep_Units> allsepunits_rel := ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/Sep_unit_rel)';
 			attribute<sep_units>           sepunit_rel     := rlookup(allsepunits_rel, sep_units/org_rel);
 			attribute<Countries>           country_rel     := sep_units/country_rel[sepunit_rel];
 			
@@ -48,12 +48,12 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 		}
 		unit<uint32> Countries := ='select_with_attr_by_cond(inCountries, inCountries/Continents_rel == Continents/v/'+Continent_name+')' 
 		{
-			attribute<string>       Label              := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Label)';
-			attribute<string>       ZoneId             := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/ZoneId)';
-			attribute<WGS84>        Geometry_LL (poly) := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry_LL)';
-			attribute<inCountries>  org_rel            := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', id(inCountries))';
-			attribute<WebMercator>  Geometry_WM (poly) := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry_WM)';
-			attribute<WorldMollweide>  Geometry_MW (poly) := ='select_data(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry_MW)';
+			attribute<string>       Label              := ='collect_by_cond(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Label)';
+			attribute<string>       ZoneId             := ='collect_by_cond(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/ZoneId)';
+			attribute<WGS84>        Geometry_LL (poly) := ='collect_by_cond(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry_LL)';
+			attribute<inCountries>  org_rel            := ='collect_by_cond(., inCountries/continents_rel == Continents/v/'+Continent_name+', id(inCountries))';
+			attribute<WebMercator>  Geometry_WM (poly) := ='collect_by_cond(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry_WM)';
+			attribute<WorldMollweide>  Geometry_MW (poly) := ='collect_by_cond(., inCountries/continents_rel == Continents/v/'+Continent_name+', inCountries/Geometry_MW)';
 			
 			unit<uint32> border_points_LL   := sequence2points(Geometry_LL) 
 			{
@@ -70,11 +70,11 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 		
 		unit<uint32> sep_units:= ='select_with_attr_by_cond(inCountry_Sep_Units, inCountry_Sep_Units/Continents_rel == Continents/v/'+Continent_name+')' 
 		{
-			attribute<string>               ZoneId              := ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/ZoneId)';
-			attribute<WGS84>                Geometry (poly)     := ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/Geometry_LL)';
-			attribute<inCountries>          allcountries_rel    := ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/country_rel)';
+			attribute<string>               ZoneId              := ='collect_by_cond(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/ZoneId)';
+			attribute<WGS84>                Geometry (poly)     := ='collect_by_cond(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/Geometry_LL)';
+			attribute<inCountries>          allcountries_rel    := ='collect_by_cond(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', inCountry_Sep_Units/country_rel)';
 			attribute<Countries>            country_rel         := rlookup(allcountries_rel, Countries/org_rel);
-			attribute<inCountry_Sep_Units>  org_rel             := ='select_data(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', id(inCountry_Sep_Units))';
+			attribute<inCountry_Sep_Units>  org_rel             := ='collect_by_cond(., inCountry_Sep_Units/continents_rel == Continents/v/'+Continent_name+', id(inCountry_Sep_Units))';
 		}
 		
 		unit<uint32> sep_units_WM := split_polygon(Countries/iGeom_WM) 
@@ -100,14 +100,14 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 		//
 		unit<uint32> Select := ='select_with_attr_by_cond(inUnit,  inUnit/continent_rel == Continents/v/'+Continent_name+')', dialogdata = "geometry_LL", dialogtype = "map"  
 		{
-			attribute<WGS84>       geometry_LL (poly) := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/geometry_LL)';
-			attribute<WGS84>       centroid           := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/centroid)';
+			attribute<WGS84>       geometry_LL (poly) := ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/geometry_LL)';
+			attribute<WGS84>       centroid           := ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/centroid)';
 			// attribute<WebMercator> centroid_wm        := convert(point(PointCol(centroid), PointRow(centroid))[WGS84], WebMercator);
 			attribute<WebMercator> centroid_wm        := convert(centroid, WebMercator);
-			attribute<float32>     population         := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)';
-			attribute<string>      Label              := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/Label)';
+			attribute<float32>     population         := ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)';
+			attribute<string>      Label              := ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/Label)';
 			attribute<Countries>   country_rel        := point_in_polygon(centroid, Countries/Geometry);
-			attribute<uint32>      type        		  := ='select_data(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/type)';
+			attribute<uint32>      type        		  := ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/type)';
 			
 			parameter<string> refname:= 'all_settlements_'+inUnit/set;
 			//collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/GridData)

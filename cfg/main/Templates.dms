@@ -58,6 +58,7 @@ container Templates: Using = "Units;Classifications;geometries"
 				attribute<bool>                Connectable         := sequence_rel -> Connectable;
 				attribute<int32>               z_order             := sequence_rel -> z_order;
 				attribute<string>              label               := 'Link_'+string(id(.));
+				attribute<Classifications/OSM/roadtype>			   roadtype_rel		   := sequence_rel -> roadtype_rel;
 				
 				// Correct network after arc2segm for incorrectly connected unequal z-orders.
 				// Is this necessary?

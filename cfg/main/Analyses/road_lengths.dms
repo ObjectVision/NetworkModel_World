@@ -1,0 +1,35 @@
+container RoadLengths {
+	
+	parameter<float64> sampling_res:= 100d;
+	
+	container RoadLengths_perContinent:= for_each_ne(Continents/name, 'getroadlengths(
+		sourcedata/Population/big_raster
+		, NetworkSetup/Per_Continent/'+Continents/name+'/NetwerkSpec/CreateInitialWorkingNetwork/Roads
+		, Classifications/OSM/roadtype
+		)');
+	
+	template getroadlengths {
+		unit<ipoint> inGrid;
+		unit<uint32> inSegments;
+		unit<uint8> roadclasses;
+		
+		unit<uint32> segments:= inSegments {
+			attribute<m> length:= dist(point_wm, nextpoint_wm)[m];
+			attribute<uint32> samples:= pcount(dyna_segments/sequence_rel);
+			attribute<float32> residual:= length[float32] % samples[float32];
+		}
+		
+		unit<uint32> dyna_segments:= dyna_point(segments/point_wm, segments/nextpoint_wm, sampling_res) {
+			attribute<roadclasses> roadtype_rel:= sequence_rel -> roadtype_rel;
+			attribute<WorldMollweide> point_mw:= point[WorldMollweide];
+			attribute<inGrid> 	 grid_rel:= point_mw[inGrid];
+			attribute<float32>   sample_weight:= id(.) = max_index(Ordinal, sequence_rel)[sequence_rel] ? segments/residual[sequence_rel] : sampling_res[float32];
+		}
+		container grids:= for_each_nedv(roadclasses/IsMain ? roadclasses/label : ''
+			, 'sum(float32(dyna_segments/roadtype_rel = '+string(id(roadclasses))+'[roadclasses]) * dyna_segments/sample_weight, dyna_segments/grid_rel)'
+			, inGrid
+			, float32);
+
+	}
+	
+} 
