@@ -57,6 +57,7 @@ container Infrastructure : using = "geometries;units"
 				{
 					attribute<wgs84>                        geometry (arc);
 					attribute<string>                       highway;
+					attribute<string>						access;
 					attribute<string>                       other_tags;
 					attribute<int32>                        z_order;
 				}

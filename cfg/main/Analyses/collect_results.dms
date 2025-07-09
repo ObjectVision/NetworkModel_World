@@ -1,12 +1,27 @@
-container collect_results: using = "Units;Geometries;SourceData/RegionalUnits;" {
+container collect_results: using = "Units;Geometries;SourceData/RegionalUnits;Classifications;" {
 	
 	parameter<string> xx:= 'X_X_X_X';
 	
 	container catchment_areas {
+		container m10:= get_catchment_areas(2, 0f);
+		container m15:= get_catchment_areas(3, 0f);
+		container m20:= get_catchment_areas(4, 0f);
+		container m25:= get_catchment_areas(5, 0f);
+		container m30:= get_catchment_areas(6, 0f);
+		container m30_p50:= get_catchment_areas(6, 50000f);
+		container m45:= get_catchment_areas(9, 0f);
+		
+		
 	
-		parameter<thresholds> inThreshold:= Analyses/Create_Centres_Catchments/Africa/inThreshold;
-		parameter<float32>	  minPop:= Analyses/Create_Centres_Catchments/Africa/minPop;
-		parameter<string> 	  pathbit:= '%LocalDataProjDir%/Settlement_Catchments/'+thresholds/name[inThreshold]+'_pop'+string(minPop / 1000f);
+	}
+	
+	Template get_catchment_areas {
+	
+		parameter<Centres_Thresholds> inThreshold;
+		parameter<float32>	  minPop;
+		parameter<bool>		  button:= true, explicitsuppliers = "loadfiles/combined_storage/all_catchments";
+		parameter<string>	  catchment_def:= propvalue(., 'name');
+		parameter<string> 	  pathbit:= '%LocalDataProjDir%/Settlement_Catchments/all_settlements_'+SourceData/Settlements/set+'/'+Centres_Thresholds/name[inThreshold]+'_pop'+string(minPop / 1000f);
 		unit<uint32> all_countries:= countries {
 			
 			attribute<string> reference:= MakeDefined(pathbit+'/'+Continents/Name[continents_rel]+'/'+ZoneId+'.shp', xx); 
@@ -26,7 +41,16 @@ container collect_results: using = "Units;Geometries;SourceData/RegionalUnits;" 
 					attribute<WorldMollweide> 	Geometry (poly):= ='union_data(.,'+asitemlist(countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/Geometry')+')', storagename = "= pathbit+'/mozaik/all_ran.shp'";
 					attribute<float32> 			pop:= ='union_data(.,'+asitemlist('float32('+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile/pop)')+')';
 					attribute<string>			Country:= ='union_data(.,'+asitemlist('const('+quote(countries_with_results/ZoneId)+', '+countries_with_results/Continent+'_'+countries_with_results/ZoneId+'/inFile, string)')+')';
+					attribute<uint32>			type:= makedefined(all_settlements/type[max_index(all_settlements/pop, all_settlements/ac_rel)], 0);
 				}
+				unit<uint32> all_settlements:= ='union_unit('+asitemlist('Create_Centres_Catchments/'+catchment_def+'/'+Continents/Name+'/SelectedSettlements')+')' {
+					attribute<WorldMollweide> geometry:= ='union_data(., '+asitemlist('Create_Centres_Catchments/'+catchment_def+'/'+Continents/Name+'/SelectedSettlements/centroid_mw')+')';
+					attribute<float32> 		  pop:= ='union_data(., '+asitemlist('Create_Centres_Catchments/'+catchment_def+'/'+Continents/Name+'/SelectedSettlements/pop')+')';
+					attribute<uint32> 		  type:= ='union_data(., '+asitemlist('Create_Centres_Catchments/'+catchment_def+'/'+Continents/Name+'/SelectedSettlements/type')+')';
+					attribute<all_catchments> ac_rel:= point_in_polygon(geometry, all_catchments/Geometry);
+				}
+
+				
 			}
 		}	
 	}
