@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<DocType name="GeoDmsMetaInfo">
+<DefaultInfo>
+	<FullName>/SourceData/Population/store_LandCells/geometry
+	</FullName>
+	<GeoDmsVersion>GeoDms 14.6.0 [Nov  7 2023 10:46:05]
+	</GeoDmsVersion>
+	<SessionStartTime>2023-11-23 16:22:35
+	</SessionStartTime>
+	<CurrentTime>2023-11-23 17:09:36
+	</CurrentTime>
+	<StatusFlags>0x5f7 = AdminMode SuspendForGUI ShowStateColors TreeViewVisible DetailsVisible EventLogVisible ToolBarVisible MultiThreading1 MultiThreading2 
+	</StatusFlags>
+</DefaultInfo>
+<Software>
+	<GeoDmsVersion>14.06
+	</GeoDmsVersion>
+</Software>
+<Config>
+	<FullName>/SourceData/Population/store_LandCells/geometry
+	</FullName>
+	<Expr>sel_LandCells/geometry
+	</Expr>
+</Config>
+<Environment>
+	<Processor>Intel64 Family 6 Model 94 Stepping 3, GenuineIntel
+	</Processor>
+	<User>Chris
+	</User>
+	<ComputerName>PC-CHRIS
+	</ComputerName>
+</Environment>
+<Parameters>
+	<OrgGridsize>1km
+	</OrgGridsize>
+	<DestGridsize>1km
+	</DestGridsize>
+	<MaxTravelTime>120
+	</MaxTravelTime>
+	<UseStreetTypeSubset>True
+	</UseStreetTypeSubset>
+	<Street_OD_ConnectabletSelectie>FuncRoadClass/V/Motorway_Freeway_or_Other_Major_Road
+	</Street_OD_ConnectabletSelectie>
+	<StreetTypeSubsetSelectie>FuncRoadClass/V/Local_Road_of_Minor_Importance
+	</StreetTypeSubsetSelectie>
+	<NumberOfItersForNetworkCleanUp>10
+	</NumberOfItersForNetworkCleanUp>
+	<Use_Country_OD_selection>True
+	</Use_Country_OD_selection>
+	<Roads_path>%NetworkModelDataDir%/Infrastructure/TomTom/Amsterdam/NW2021_SP_streets_subset.fss
+	</Roads_path>
+	<CountryFolder>Amsterdam
+	</CountryFolder>
+	<MaxCarSpeed>130
+	</MaxCarSpeed>
+	<MaxCarSpeed_limit>100
+	</MaxCarSpeed_limit>
+	<CarDefaultSpeed>50
+	</CarDefaultSpeed>
+	<CarDefaultSpeed_low>30
+	</CarDefaultSpeed_low>
+	<ConnectorLinkSpeed>15
+	</ConnectorLinkSpeed>
+	<Ferry_Speed>10
+	</Ferry_Speed>
+</Parameters>
+</DocType>
