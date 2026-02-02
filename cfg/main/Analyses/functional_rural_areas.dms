@@ -10,14 +10,18 @@ container Functional_Rural_Areas: using = "Units;Geometries;SourceData/RegionalU
 		attribute<string> LabelText: ['mean', 'biggest_centres'];
 	}
 	
-	unit<uint32> variants: NrOfRows = 8 {
+	unit<uint32> variants: NrOfRows = 19 {
 		attribute<string>  LabelText:= 'idealpop'+replace(string(ideal_pop_M), '.', '')+'_maxt'+string(max_time_h)+(min_time_h > 0d ? '_mint'+string(min_time_h) : '') + (agg_m > 0 ? '_agg_' + tt_aggregation_method/LabelText[agg_m] : '');
-		attribute<float32> ideal_pop_M: [2, 4, 4, 4, 0.025, 0.05, 0.025, 0.05];
-		attribute<min_f> max_time_h:  [240, 240, 480, 480, 60, 60, 120, 120];
-		attribute<min_f> min_time_h:  [120, 120, 120, 240, 30, 30, 30,  30];
+		attribute<float32> ideal_pop_M: [2,   4,   4,   4,   0.025, 0.05, 0.025, 0.05, 0.025, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.025, 0.025, 0.025, 0.025];
+		attribute<min_f> max_time_h:    [240, 240, 480, 480, 60,    60,   60,    60,   120,   120,  120,  120,  120,  120,  45,   45,    40,    35,    30];
+		attribute<min_f> min_time_h:    [120, 120, 120, 240, 20,    20,   30,    30,   30,    30,   35,   40,   45,   60,   20,   20,    15,    15,    15];
 		attribute<tt_aggregation_method> agg_m:= (id(.)>#.)[tt_aggregation_method];
 	}	
-		
+/*
+	attribute<float32> ideal_pop_M: [0.025, 0.05, 0.025, 0.05, 0.025, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05];
+	attribute<min_f> max_time_h:  [60, 60, 60, 60, 120, 120, 120, 120, 120, 120, 45];
+	attribute<min_f> min_time_h:  [20, 20, 30, 30, 30,  30, 35, 40, 45, 60, 20];
+*/		
 	container per_continent:= for_each_ne(Continents/Name, 'Prepare_Functional_Areas_T(Analyses/Create_Centres_Catchments/'+catchment_def+'/'+Continents/Name+')');
 	
 	
@@ -232,7 +236,7 @@ container Functional_Rural_Areas: using = "Units;Geometries;SourceData/RegionalU
 					attribute<float32>	random:= 	rnd_uniform(0, ., range(float32, 0f, 0.1f));
 					attribute<float32>	noFUAs:=	float32(max_elem(PrevAreas/hasFua[from], PrevAreas/hasFua[to]) = 0);
 					attribute<float32>	noExclvs:= 	float32(max_elem(PrevAreas/hasExclv[from], PrevAreas/hasExclv[to]) = 0);
-					attribute<float32>	score:= 	noFUAs * noExclvs * float32(from <> to) * conn * float32(min < max_time) * (maxwpop) * (min^dist_decay) * float32(maxwpop > 1f || min < min_time); 
+					attribute<float32>	score:= 	noFUAs * noExclvs * float32(from <> to) * conn * float32(min < max_time) * (maxwpop) * (min[float32]^dist_decay) * float32(maxwpop > 1f || min < min_time); 
 					attribute<float32>	maxwpop:=	max_elem(PrevAreas/wpop[from], PrevAreas/wpop[to]);
 					attribute<float32>	pop:=		PrevAreas/Pop[from] + PrevAreas/Pop[to];
 					//attribute<bool>	   	best:= 		IsDefined(invert(PrevAreas/fsel)) && IsDefined(invert(PrevAreas/tsel));

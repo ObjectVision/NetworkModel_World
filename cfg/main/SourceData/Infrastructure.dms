@@ -14,6 +14,7 @@ container Infrastructure : using = "geometries;units"
 			)
 		{
 			parameter<string> Generate_all      := 'Ready', ExplicitSuppliers = "=AsList(Regios/name+'/Generate_Lines_FSS', ';')";
+			container Netherlands:= Per_Continent_T('Netherlands');
 		}
 		
 		container Per_Continent 

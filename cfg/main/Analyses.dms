@@ -36,6 +36,7 @@ container Analyses: Using = "Units;Classifications;geometries;sourcedata;SourceD
 		container m30_50k:= for_each_ne(Continents/Name, 'Prepare_Catchments_T('+quote(Continents/label)+ eval + ', 6[Centres_Thresholds], 50000[float32])');
 	}
 	#include<Functional_Rural_Areas.dms>
+	#include<count_functional_rural_areas.dms>
 	#include<Accessibility.dms>
 	#include<road_lengths.dms>
 	#include<Collect_Results.dms>
