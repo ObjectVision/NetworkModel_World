@@ -1,8 +1,9 @@
 set pf="Program Files"
 set config=D:\ProjDir\NetworkModel_World\cfg
-set geodmsversion=GeoDMS14.7.0
+set geodmsversion=GeoDMS18.1.2
 
-set continentlist=Africa Asia Australia_Oceania Europe North_America South_America
+rem set continentlist=Africa Asia Australia_Oceania Europe North_America South_America
+set continentlist=Africa Asia Australia_Oceania Europe South_America
 
 for %%c in (%continentlist%) do (
 echo Running network generation for %%c

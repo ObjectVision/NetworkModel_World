@@ -9,10 +9,10 @@
 	parameter<uint8>    NumberOfItersForNetworkCleanUp := 10b;
 	
 	// SourceData Settings
-	parameter<string>   PopVersie                      := '2021_v1_0'; //2021_v1_0 2018
+	parameter<string>   PopVersie                      := 'GHS_WUP_POP_E2025_GLOBE_R2025A_54009_1000_V1_0'; //2021_v1_0 2018 //2021_v1_0
 	parameter<string>   PopGridSize                    := '1000';
 	
-	parameter<string>   OSM_file_date                  := '20231109';
+	parameter<string>   OSM_file_date                  := '20260202';
 	parameter<string>   OSM_dir                        := '%NetworkModelWorld_DataDir%/Infrastructure/OSM/'+OSM_file_date;
 	parameter<string>   OSM_dir_date                   := 'latest';
 	

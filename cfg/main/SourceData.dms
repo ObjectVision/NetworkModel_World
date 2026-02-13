@@ -185,7 +185,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 	container Population: Using = "RegionalUnits;"
 	{
 		parameter<string> GridSize          := /ModelParameters/PopGridSize;
-		parameter<string> FileName_src      := '%NetworkModelWorld_DataDir%/population/GHS_POP_E2020_GLOBE_R2023A_54009_@GRID@_V1_0';
+		parameter<string> FileName_src      := '%NetworkModelWorld_DataDir%/population/GHS_WUP_POP_E2025_GLOBE_R2025A_54009_@GRID@_V1_0';
 		parameter<string> FileName          := replace(FileName_src, '@GRID@', Gridsize);
 
 		unit<ipoint> big_raster
@@ -197,12 +197,14 @@ container SourceData: Using = "Units;Classifications;geometries"
 		{ 
 			attribute<float64>      GridData; // don't read this; memory will explode
 			attribute<Sep_units>    sep_unit_rel:= poly2grid(Sep_units/Geometry_MW, .);
+			attribute<FunctionalAreas> fa_rel:= poly2grid(FunctionalAreas/Geometry_MW, .);
 		}
 		
 		unit<uint64> sel_LandCells := select(IsDefined(big_raster/sep_unit_rel)), DialogType = "map", DialogData = "org_rel"  // big_raster/GridData >= 0d && selection criterion removed (problematic exception in Canada)
 		{
 			attribute<big_raster>     org_rel              := collect_by_cond(sel_LandCells, IsDefined(big_raster/sep_unit_rel), id(big_raster));
 			attribute<Sep_units>      sep_unit_rel         := collect_by_cond(sel_LandCells, IsDefined(big_raster/sep_unit_rel), big_raster/sep_unit_rel);
+			attribute<FunctionalAreas>fa_rel        	   := collect_by_cond(sel_LandCells, IsDefined(big_raster/sep_unit_rel), big_raster/fa_rel);
 			attribute<float64>        population           := collect_by_cond(sel_LandCells, IsDefined(big_raster/sep_unit_rel), big_raster/GridData);
 			attribute<WGS84>          Geometry             := convert(org_rel, WGS84);
 		}
@@ -210,6 +212,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 		{
 			attribute<big_raster>     org_rel              := sel_LandCells/org_rel;
 			attribute<Sep_units>      sep_unit_rel         := sel_LandCells/sep_unit_rel;
+			attribute<FunctionalAreas>fa_rel			   := sel_LandCells/fa_rel;
 			attribute<float64>        population           := sel_LandCells/population;
 			attribute<WGS84>          geometry             := sel_LandCells/geometry;
 		}	
@@ -217,6 +220,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 		{
 			attribute<big_raster>     org_rel;
 			attribute<Sep_units>      sep_unit_rel;
+			attribute<FunctionalAreas>fa_rel;
 			attribute<float64>        population;
 			attribute<WGS84>          geometry;
 			attribute<Countries>      country_rel	:= Sep_units/country_rel[sep_unit_rel];
@@ -232,7 +236,11 @@ container SourceData: Using = "Units;Classifications;geometries"
 			attribute<Continents>     continent_rel        := collect_by_cond(PopulatedCells, LandCells/population > 0d, LandCells/continent_rel);
 		}
 	}
-	
+	container adhoc {
+		unit<wpoint> snapraster_edgar: storagename = "%NetworkModelWorld_DataDir%/adhoc/edgar_snap_raster_1km.tif", StorageReadOnly = "true", StorageType = "gdal.grid", dialogdata = "WGS84" {
+			attribute<uint32> GridData;
+		}
+	}
 	Template CalcPopCentroids_T
 	{
 		unit<uint32> src;

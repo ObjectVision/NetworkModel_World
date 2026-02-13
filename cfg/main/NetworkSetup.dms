@@ -30,6 +30,7 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 		parameter<string> Continent_name;
 		unit<uint32>      inCountries;
 		unit<uint32>	  inCountry_Sep_Units:= RegionalUnits/sep_units;
+		
 		//
 		unit<uint64> Select_ui64 := ='select_with_attr_by_cond(inUnit,  inUnit/continent_rel == Continents/v/'+Continent_name+')';
 		
@@ -41,7 +42,9 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 			attribute<WebMercator>         centroid_wm     := convert(centroid, WebMercator);
 			attribute<float32>             population      := ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/population)[float32]';
 			attribute<inCountry_Sep_Units> allsepunits_rel := ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/Sep_unit_rel)';
+			attribute<RegionalUnits/FunctionalAreas> all_fas_rel:= ='collect_by_cond(., inUnit/continent_rel == Continents/v/'+Continent_name+', inUnit/fa_rel)';
 			attribute<sep_units>           sepunit_rel     := rlookup(allsepunits_rel, sep_units/org_rel);
+			attribute<functional_areas>    fa_rel		   := rlookup(all_fas_rel, functional_areas/orgrel);
 			attribute<Countries>           country_rel     := sep_units/country_rel[sepunit_rel];
 			
 			parameter<string> refname:= 'grids_1km';
@@ -86,11 +89,10 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 			attribute<WebMercator> geometry_WM (poly) := points2sequence_pso(border_points/points_div, border_points/sequence_rel, border_points/ordinal);
 			attribute<Countries>   country_rel        := polygon_rel;
 		}
-		
-		// establish islands here (make connections to right, right/bottom, bottom)
-		//unit<uint32> 
-		
-			//collect_by_cond(sel_LandCells, big_raster/GridData >= 0d && IsDefined(big_raster/country_rel), big_raster/GridData)
+		unit<uint32> functional_areas:= ='select_with_attr_by_cond(RegionalUnits/FunctionalAreas, RegionalUnits/FunctionalAreas/Continents_rel == Continents/v/'+Continent_name+')' {
+			attribute<string> ZoneId:= INT_ISO + string(faid);
+			attribute<Countries> Continental_countries_rel:= rlookup(Country_rel, Countries/org_rel);
+		}
 	}
 	
 	Template selSettlements_Per_Continent_T
@@ -135,7 +137,7 @@ container NetworkSetup : using = "units;geometries;SourceData;Classifications;So
 			);
 			
 		parameter<bool> Store_Network1:= True, explicitsuppliers = "NetwerkSpec/CreateInitialWorkingNetwork/LinkSet_Write;";
-		parameter<bool> Store_Network2:= True, explicitsuppliers = "NetwerkSpec/CreateMoreEfficientNetwork/FinalNodeSet_Write;NetwerkSpec/CreateMoreEfficientNetwork/FinalLinkSet_Write;";
+		parameter<bool> Store_Network2:= True, explicitsuppliers = "NetwerkSpec/CreateMoreEfficientNetwork/FinalNodeSet_Write;NetwerkSpec/CreateMoreEfficientNetwork/FinalLinkSet_Write;NetwerkSpec/CreateMoreEfficientNetwork/ChangesTracker_Write;";
 		
 	}
 }

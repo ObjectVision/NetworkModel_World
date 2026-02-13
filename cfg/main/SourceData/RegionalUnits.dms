@@ -48,6 +48,35 @@ container RegionalUnits : using = "geometries"
 		}
 		
 	}
+	/*unit<ipoint> FunctionalAreas_all_grid
+	: Storagename = "='%NetworkModelWorld_DataDir%/Regions/fas_combined_20250428_54009_1000m.tif'"
+	, StorageType = "gdal.grid"
+	, StorageReadOnly = "true"
+	, DialogData      = "WorldMollweide"
+	{
+		attribute<uint32> ReadData (domain);
+		attribute<FunctionalAreas_all> FA_all_rel (domain):= rlookup(ReadData, uint32(FunctionalAreas_all/gridval));
+		attribute<FunctionalAreas>	 FA_rel		  (domain):= invert(FunctionalAreas/org_rel)[FA_all_rel];
+	}*/
+	unit<uint32> FunctionalAreas
+	: StorageName = "='%NetworkModelWorld_DataDir%/Regions/fas_combined_20250428_54009.shp'"
+	, StorageType = "gdal.vect"
+	, StorageReadOnly = "true"
+	, DialogData      = "WorldMollweide"
+	{
+		attribute<WorldMollweide>         geometry_MW                    (poly) := geometry;
+		attribute<WGS84>           	 geometry_LL                    (poly) := convert(geometry_MW, WGS84);
+		
+		attribute<string>                 Label                                 := 'z_'+string(gridval);
+		// attribute<.>                      per_CompactedDomain (CompactedDomain) := per_domain[CompactedDomain/domain_rel];
+		//attribute<bool>                   IsStudyArea_domain           (domain) := IsDefined(per_domain) && IsDefined(CurrentProjection/per_domain);
+		//attribute<bool>                   IsStudyArea                           := modus(IsStudyArea_domain, per_domain);
+		//attribute<string>                 Continent                             := rjoin(country, set_countries/zoneid, set_countries/continent);
+		attribute<Countries>          Country_rel                           := rlookup(INT_ISO, Countries/zoneid);
+		attribute<Continents>		  Continents_rel						:= Countries/Continents_rel[Country_rel];
+		attribute<uint32> 			  faid:= uint32(gridval);
+		attribute<.> 				  orgrel:= id(.);
+	}
 	unit<uint32> store_sep_units := bp_split_polygon(Countries/Geometry[BaseProjection_ip]), descr = "separated polygons that entail a country."
 	, storagename = "%NetworkModelWorld_DataDir%/Regions/fss/sep_units.fss"
 	{
@@ -94,7 +123,7 @@ container RegionalUnits : using = "geometries"
 			attribute<string>  Continent      : ['Europe', 'Asia'];
 		}
 		
-		unit<uint32> inMatrix:= range(uint32, 0, 239*3)
+		unit<uint32> inMatrix:= range(uint32, 0, #.*3)
 		{
 			attribute<string> data: [
 			//'Code',	'Label',	'Continent',
@@ -177,7 +206,6 @@ container RegionalUnits : using = "geometries"
 			'GHA',	'Ghana',	'Africa',
 			'GIB',	'Gibraltar',	'Africa',
 			'GIN',	'Guinea',	'Africa',
-			'GLP',	'Guadeloupe',	'North_America',
 			'GMB',	'Gambia',	'Africa',
 			'GNB',	'Guinea-Bissau',	'Africa',
 			'GNQ',	'Equatorial Guinea',	'Africa',
@@ -228,6 +256,7 @@ container RegionalUnits : using = "geometries"
 			'LVA',	'Latvia',	'Europe',
 			'MAC',	'Macau',	'Asia',
 			'GLP',	'Guadeloupe',	'North_America',
+			'MAF',	'Saint Martin (FR)', 'North_America',
 			'MAR',	'Morocco',	'Africa',
 			'MCO',	'Monaco',	'Europe',
 			'MDA',	'Moldova',	'Europe',

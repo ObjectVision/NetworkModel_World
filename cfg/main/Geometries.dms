@@ -109,15 +109,15 @@ container Geometries : using = "units"
 	unit<wpoint> Base_grid_base :=
 		gridset(
 			range(WGS84, 
-				LowerBound(WGS84) + point(0.5 * SourceRasterFactor, 0.5 * SourceRasterFactor, WGS84), 
-				UpperBound(WGS84) - point(0.5 * SourceRasterFactor, 0.5 * SourceRasterFactor, WGS84)
+				LowerBound(WGS84) + point_xy(0.5 * SourceRasterFactor, 0.5 * SourceRasterFactor, WGS84), 
+				UpperBound(WGS84) - point_xy(0.5 * SourceRasterFactor, 0.5 * SourceRasterFactor, WGS84)
 			)
-			, point(-SourceRasterFactor, SourceRasterFactor, WGS84)
-			, point(90d, -180d, WGS84)
+			, point_xy(-SourceRasterFactor, SourceRasterFactor, WGS84)
+			, point_xy(90d, -180d, WGS84)
 			, wpoint
 		), DialogData = "WGS84";
  
-	unit<wpoint> Base_grid     := TiledUnit(point(1024w, 43200w, Base_grid_base))
+	unit<wpoint> Base_grid     := TiledUnit(point_xy(1024w, 43200w, Base_grid_base))
 	{
 		unit<uint16> rowset := range(uint16, pointrow(Lowerbound(.)), pointrow(Upperbound(.)));
 		unit<uint16> colset := range(uint16, pointcol(Lowerbound(.)), pointcol(Upperbound(.)));

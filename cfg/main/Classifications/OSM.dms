@@ -1,5 +1,11 @@
 container OSM
-{
+{	
+	unit<uint32> MainRoadClasses: nrofrows = 5 {
+		attribute<string> Label: ['Main', 'Secondary', 'Tertiary', 'Not_A_Road', 'Connector'];
+		
+		container V:= for_each_nedv(Label, string(id(MainRoadClasses)), void, MainRoadClasses);
+	}
+
 	unit<UInt8> roadtype : NrOfRows = 78
 	{
 		attribute<String>       Name                 := Label;
@@ -10,7 +16,12 @@ container OSM
 		attribute<String>       Label                := Elements/Text[value(UInt32(ID(.))* nrAttr + 5, Elements)], DialogType = "LabelText";
 
 		attribute<bool>         IsPartOfCarNetwork    := CarSpeedInside  > value(1, km_hr);
-
+		
+		attribute<MainRoadClasses> mrc_rel:= switch(	case(!IsPartOfCarNetwork, MainRoadClasses/V/Not_A_Road), 
+														case(IsPartOfCarNetwork && CarSpeedOutside > 70[km_hr], MainRoadClasses/V/Main),
+														case(IsPartOfCarNetwork && CarSpeedOutside <= 70[km_hr] && CarSpeedOutside > 30[km_hr], MainRoadClasses/V/Secondary),
+														MainRoadClasses/V/Tertiary);
+		
 		parameter<uint32> nrAttr := 8;
 		unit<UInt32> Elements := Range(uint32, 0, nrAttr*#.)
 		{

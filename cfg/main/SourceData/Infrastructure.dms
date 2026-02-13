@@ -32,6 +32,7 @@ container Infrastructure : using = "geometries;units"
 				attribute<bool>                         IsOneDirection := union_data(., Per_OSM_Continent/North_America/Roads/IsOneDirection,Per_OSM_Continent/Central_America/Roads/IsOneDirection);
 				attribute<bool>                         Connectable    := union_data(., Per_OSM_Continent/North_America/Roads/Connectable,Per_OSM_Continent/Central_America/Roads/Connectable);
 				attribute<km_hr>                        KPH            := union_data(., Per_OSM_Continent/North_America/Roads/KPH,Per_OSM_Continent/Central_America/Roads/KPH);
+				attribute<classifications/OSM/MainRoadClasses>				mrc_rel		   := union_data(., Per_OSM_Continent/North_America/Roads/mrc_rel,Per_OSM_Continent/Central_America/Roads/mrc_rel);
 			}
 			unit<uint32> South_America     := Per_OSM_Continent/South_America/Roads;
 		}
@@ -42,25 +43,25 @@ container Infrastructure : using = "geometries;units"
 			parameter<string> Regio0;
 			///
 			parameter<string> Regio := replace(Regio0, '_', '-');
-			
-			
 			parameter<string> Generate_Lines_FSS      := 'Lines', ExplicitSuppliers = "Make_lines_fss";
 			
+			parameter<string> GDAL_Options: ['INTERLEAVED_READING=YES'];
+				
 			container Read_Roads_pbf
 			:	StorageName     = "= dir + '/'+Regio+'-'+date+'.osm.pbf'" 
 			,	StorageType     = "gdal.vect"
 			,	StorageReadOnly = "True"
-			, 	SyncMode        = "None"
+			,	SyncMode        = "AllTables"
 			, 	DialogData      = "wgs84"
 			{
-				unit<uint32> lines : sqlstring = "SELECT * FROM lines"
+				/*unit<uint32> lines : sqlstring = "SELECT * FROM lines"
 				{
 					attribute<wgs84>                        geometry (arc);
 					attribute<string>                       highway;
 					attribute<string>						access;
 					attribute<string>                       other_tags;
 					attribute<int32>                        z_order;
-				}
+				}*/
 			}
 			
 			unit<uint32> Make_lines_fss := Read_Roads_pbf/lines
@@ -109,6 +110,10 @@ container Infrastructure : using = "geometries;units"
 				attribute<MaxSpeeds>                       KPH_from_source_rel    := ='argmax_ifdefined_uint8('+AsItemList('ExtractMaxSpeeds/'+MaxSpeeds/name+' > 0 ? ExtractMaxSpeeds/'+MaxSpeeds/name+' : null_u')+')';
 				attribute<km_hr>                           KPH_from_source        := value(MaxSpeeds/speed, km_hr)[KPH_from_source_rel];
 				attribute<km_hr>                           KPH                    := MakeDefined(KPH_from_source, Classifications/OSM/roadtype/CarSpeedOutside[roadtype_rel]);
+				attribute<classifications/OSM/MainRoadClasses> mrc_rel:= switch(	case(!Read_lines_fss/IsPartOfCarNetwork && !Read_lines_fss/IsCarFerry, classifications/OSM/MainRoadClasses/V/Not_A_Road),
+																		case((IsPartOfCarNetwork || IsCarFerry) && KPH > 70[km_hr], classifications/OSM/MainRoadClasses/V/Main),
+																		case((IsPartOfCarNetwork || IsCarFerry) && KPH <= 70[km_hr] && KPH > 30[km_hr], classifications/OSM/MainRoadClasses/V/Secondary),
+																		classifications/OSM/MainRoadClasses/V/Tertiary);
 			}
 			
 			unit<uint32> Roads := select_with_attr_by_cond(Read_lines_fss, Read_lines_fss/IsPartOfCarNetwork || Read_lines_fss/IsCarFerry)
