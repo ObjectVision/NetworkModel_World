@@ -95,12 +95,12 @@ container RegionalUnits : using = "geometries"
 		attribute<WorldMollweide>   Geometry_MW (poly) := convert(geometry, WorldMollweide);
 		attribute<WebMercator>      Geometry_WM (poly) := convert(geometry, WebMercator);
 	}
-	unit<uint32> set_countries : nrofrows = 239 
+	unit<uint32> set_countries : nrofrows = 240 
 	{
 		attribute<string> ZoneId          := inMatrix/data[(id(.)*3+0)[inMatrix]];
 		attribute<string> Label           := inMatrix/data[(id(.)*3+1)[inMatrix]];
 		attribute<string> Continent       := inMatrix/data[(id(.)*3+2)[inMatrix]];
-		attribute<wgs84>  Geometry (poly) := makedefined(rjoin(ZoneId, ciesin_countries/GID_0, ciesin_countries/Geometry), rjoin(ZoneId, russian_units/GID_0, russian_units/Geometry));
+		attribute<wgs84>  Geometry (poly) := makedefined(rjoin(ZoneId, ciesin_countries/GID_0, ciesin_countries/Geometry), makedefined(rjoin(ZoneId, russian_units/GID_0, russian_units/Geometry), rjoin(ZoneId, spanish_units/GID_0, spanish_units/Geometry)));
 		
 		unit<uint32> export_countries := set_countries
 		, storagename = "%localdataprojdir%/export/countries.dbf" 
@@ -121,6 +121,12 @@ container RegionalUnits : using = "geometries"
 			attribute<wgs84>   Geometry (poly);
 			attribute<string>  GID_0          : ['ERUS', 'ARUS'];
 			attribute<string>  Continent      : ['Europe', 'Asia'];
+		}
+		unit<uint32> spanish_units:  storagename = "%NetworkModelWorld_DataDir%/Regions/esp_dissolved_wgs84.shp", storagetype = "gdal.vect", storagereadonly = "true" 
+		{
+			attribute<wgs84>   Geometry (poly);
+			attribute<string>  GID_0          : ['ESP_AFR', 'ESP_EUR'];
+			attribute<string>  Continent      : ['Africa', 'Europe'];
 		}
 		
 		unit<uint32> inMatrix:= range(uint32, 0, #.*3)
@@ -178,7 +184,7 @@ container RegionalUnits : using = "geometries"
 			'CUB',	'Cuba',	'North_America',
 			'CUW',	'Curaçao',	'South_America',
 			'CYM',	'Cayman Islands',	'North_America',
-			'CYP',	'Cyprus',	'Asia',
+			'CYP',	'Cyprus',	'Europe',
 			'CZE',	'Czechia',	'Europe',
 			'DEU',	'Germany',	'Europe',
 			'DJI',	'Djibouti',	'Africa',
@@ -190,7 +196,8 @@ container RegionalUnits : using = "geometries"
 			'EGY',	'Egypt',	'Africa',
 			'ERI',	'Eritrea',	'Africa',
 			'ESH',	'Western Sahara',	'Africa',
-			'ESP',	'Spain',	'Europe',
+			'ESP_EUR',	'European_Spain',	'Europe', // european and mediterranean Spain
+			'ESP_AFR',	'African_Spain',	'Africa', // canaries, melilla, ceuta
 			'EST',	'Estonia',	'Europe',
 			'ETH',	'Ethiopia',	'Africa',
 			'FIN',	'Finland',	'Europe',
@@ -204,7 +211,7 @@ container RegionalUnits : using = "geometries"
 			'GEO',	'Georgia',	'Asia',
 			'GGY',	'Guernsey',	'Europe',
 			'GHA',	'Ghana',	'Africa',
-			'GIB',	'Gibraltar',	'Africa',
+			'GIB',	'Gibraltar',	'Europe',
 			'GIN',	'Guinea',	'Africa',
 			'GMB',	'Gambia',	'Africa',
 			'GNB',	'Guinea-Bissau',	'Africa',

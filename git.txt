@@ -5,16 +5,7 @@ Your branch is up to date with 'origin/main'.
 Changes not staged for commit:
   (use "git add <file>..." to update what will be committed)
   (use "git restore <file>..." to discard changes in working directory)
-	modified:   batch/gen_continental_networks.cmd
-	modified:   cfg/main/Analyses.dms
-	modified:   cfg/main/Classifications/OSM.dms
-	modified:   cfg/main/Geometries.dms
-	modified:   cfg/main/ModelParameters.dms
-	modified:   cfg/main/NetworkSetup.dms
-	modified:   cfg/main/SourceData.dms
-	modified:   cfg/main/SourceData/Infrastructure.dms
 	modified:   cfg/main/SourceData/RegionalUnits.dms
-	modified:   cfg/main/Templates.dms
 	modified:   git.txt
 
 Untracked files:
@@ -23,4 +14,4 @@ Untracked files:
 	cfg/main/Analyses/computeproxy.dms
 
 no changes added to commit (use "git add" and/or "git commit -a")
-07ba18576d56bd432d0198ba6ea62d3ba403bfc8
+20697d3242dfeb4de85355c447cacd84284dc261
