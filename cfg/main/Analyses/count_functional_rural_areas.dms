@@ -1,0 +1,38 @@
+container count_fra_results {
+	
+	parameter<string> settlements_refname:= 'all_settlements_'+/ModelParameters/Settlements_Set;
+	parameter<string> inThreshold:= Centres_Thresholds/name[2];
+	
+	unit<uint32> variants:= /Analyses/Functional_Rural_Areas/Variants;
+	
+	container KOR:= get_Counts_T('Asia');
+	container CAN:= get_Counts_T('North_America');
+	
+	Template get_Counts_T {
+		parameter<string> Continent_name; 
+		parameter<string> inCountry:= propValue(., 'Name');
+		
+		attribute<uint32> n (variants):= ='union_data(variants, '+asitemlist('loadfiles/'+variants/LabelText+'/count')+')' ;
+		
+		container loadfiles:= for_each_ne(variants/LabelText, 'loadfiles_T('+quote(variants/LabelText)+')');
+		
+		Template loadfiles_T {
+		
+			parameter<string> variant_name;
+			
+			parameter<string> filepath:= '%LocalDataProjDir%/Functional_Rural_Areas/'+settlements_refname+'/Base_'+inThreshold+
+			'/'+variant_name+'/'+Continent_name+'/'+inCountry;
+			
+			unit<uint32> infile: storagename = "=filepath+'.shp'", storagereadonly="True", storagetype="gdal.vect", dialogdata="/Geometries/WorldMollweide" {
+				attribute<uint32> Def;
+			}
+			
+			unit<uint32> def_fras:= select_with_attr_by_cond(infile, infile/def=1);
+			
+			parameter<uint32> count:= #def_fras;
+			
+		}
+	}
+	
+
+}
