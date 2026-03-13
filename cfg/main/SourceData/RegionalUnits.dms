@@ -1,13 +1,20 @@
 container RegionalUnits : using = "geometries"
 { 	
 	unit<uint32> FUAs
-	: storagename = "%NetworkModelWorld_DataDir%/Regions/FUAs/FUAs_EU_US_ESPON_OECD_4326.shp"
+	: storagename = "%NetworkModelWorld_DataDir%/Regions/FUAs/FUAs_OECD_4326.shp"
 	, storagetype = "gdal.vect"
 	, storagereadonly = "True" 
 	{
 		attribute<wgs84> 	Geometry (poly);
-		attribute<string>   ZoneId:= FUA_ID; 
-		attribute<string> 	Label:= FUA_NAME;
+		attribute<string>   ZoneId:= fuacode; 
+		attribute<string> 	Label:= fuaname;
+	}
+	unit<uint32> Country_Outlines
+	: storagename = "%NetworkModelWorld_DataDir%/Regions/FUAs/country_outlines_from_gadm.shp"
+	, storagetype = "gdal.vect"
+	, storagereadonly = "True" 
+	{
+		attribute<wgs84> 	Geometry (poly);
 	}
 	unit<uint32> Countries
 	: storagename = "= propvalue(store_Countries, 'StorageName')"
@@ -87,6 +94,7 @@ container RegionalUnits : using = "geometries"
 	}
 	unit<uint32> store_Countries := set_countries
 	, storagename = "%NetworkModelWorld_DataDir%/Regions/fss/Countries.fss"
+	//, storagetype = ""
 	{
 		attribute<string>           ZoneId             := set_countries/ZoneId;
 		attribute<string>           Label              := set_countries/Label;
@@ -263,7 +271,7 @@ container RegionalUnits : using = "geometries"
 			'LVA',	'Latvia',	'Europe',
 			'MAC',	'Macau',	'Asia',
 			'GLP',	'Guadeloupe',	'North_America',
-			'MAF',	'Saint Martin (FR)', 'North_America',
+			'MAF',	'Saint_Martin', 'North_America',
 			'MAR',	'Morocco',	'Africa',
 			'MCO',	'Monaco',	'Europe',
 			'MDA',	'Moldova',	'Europe',
@@ -349,7 +357,7 @@ container RegionalUnits : using = "geometries"
 			'TKM',	'Turkmenistan',	'Asia',
 			'TLS',	'Timor-Leste',	'Asia',
 			'TON',	'Tonga',	'Australia_Oceania',
-			'TTO',	'Trinidad and Tobago',	'South_America',
+			'TTO',	'Trinidad and Tobago',	'North_America',
 			'TUN',	'Tunisia',	'Africa',
 			'TUR',	'Turkey',	'Europe',
 			'TUV',	'Tuvalu',	'Australia_Oceania',

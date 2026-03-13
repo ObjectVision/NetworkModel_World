@@ -1,13 +1,13 @@
 set pf="Program Files"
 set config=D:\ProjDir\NetworkModel_World\cfg
-set geodmsversion=GeoDMS14.9.0
+set geodmsversion=GeoDMS18.1.2
 
 rem C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Obtain_Settlement_Hierarchies/Africa/Store_Hierarchies
 rem C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Obtain_Settlement_Hierarchies/Asia/Store_Hierarchies
-C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Obtain_Settlement_Hierarchies/Australia_Oceania/Store_Hierarchies
-C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Obtain_Settlement_Hierarchies/Europe/Store_Hierarchies
-C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Obtain_Settlement_Hierarchies/North_America/Store_Hierarchies
-C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Obtain_Settlement_Hierarchies/South_America/Store_Hierarchies
+rem C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Obtain_Settlement_Hierarchies/Australia_Oceania/Store_Hierarchies
+rem C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Obtain_Settlement_Hierarchies/Europe/Store_Hierarchies
+rem C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Obtain_Settlement_Hierarchies/North_America/Store_Hierarchies
+rem C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Obtain_Settlement_Hierarchies/South_America/Store_Hierarchies
 
 
 set africa_list=DZA AGO BEN BWA BFA BDI CPV CMR CAF TCD COM CIV COD DJI EGY GNQ ERI ETH ATF GAB GMB GHA GIB GIN GNB KEN LSO LBR LBY MDG MWI MLI MRT MUS MYT MAR MOZ NAM NER NGA COG RWA REU SHN SEN SYC SLE SOM ZAF SSD SDN SWZ STP TZA TGO TUN UGA ESH ZMB ZWE
@@ -17,29 +17,33 @@ set europe_list=ALB AND AUT BLR BEL BIH BGR HRV CZE DNK EST FRO FIN FRA DEU GRC 
 set north_america_list=AIA ATG BHS BRB BLZ BMU VGB CAN CYM XCL CRI CUB DMA DOM SLV GRL GRD GLP GTM HTI HND JAM MTQ MSR MEX NIC PAN PRI KNA LCA SPM VCT BLM MAF SXM TCA USA VIR
 set south_america_list=ARG ABW BOL BES BRA CHL COL CUW ECU FLK GUF GUY PRY PER SUR TTO URY VEN
 
+rem countries requested by OECD
+set north_america_list=CAN MEX
+set europe_list=DNK DEU ITA NOR SWE POL GBR 
 
-for %%c in (%africa_list%) do (
-	echo Running catchment generation for African countries %%c
-	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/Africa/Country_Catchments/%%c/store_catchment
-)
-for %%c in (%asia_list%) do (
-	echo Running catchment generation for Asian countries %%c
-	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/Asia/Country_Catchments/%%c/store_catchment
-)
-for %%c in (%australia_oceania_list%) do (
-	echo Running catchment generation for Australia and Oceanian countries %%c
-	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/Australia_Oceania/Country_Catchments/%%c/store_catchment
-)
+
+rem for %%c in (%africa_list%) do (
+rem	echo Running catchment generation for African countries %%c
+rem	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/m10_ex_fua/Africa/Country_Catchments/%%c/store_catchment
+rem )
+rem for %%c in (%asia_list%) do (
+rem	echo Running catchment generation for Asian countries %%c
+rem	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/Asia/Country_Catchments/%%c/store_catchment
+)rem 
+rem for %%c in (%australia_oceania_list%) do (
+rem	echo Running catchment generation for Australia and Oceanian countries %%c
+rem	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/Australia_Oceania/Country_Catchments/%%c/store_catchment
+rem )
 for %%c in (%europe_list%) do (
 	echo Running catchment generation for European countries %%c
-	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/Europe/Country_Catchments/%%c/store_catchment
+	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/m10_ex_fua/Europe/Country_Catchments/%%c/store_catchment
 )
 for %%c in (%north_america_list%) do (
 	echo Running catchment generation for North American countries %%c
-	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/North_America/Country_Catchments/%%c/store_catchment
+	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/m10_ex_fua/North_America/Country_Catchments/%%c/store_catchment
 )
-for %%c in (%south_america_list%) do (
-	echo Running catchment generation for South American countries %%c
-	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/South_America/Country_Catchments/%%c/store_catchment
-)
+rem for %%c in (%south_america_list%) do (
+rem	echo Running catchment generation for South American countries %%c
+rem	C:\%pf%\ObjectVision\%geodmsversion%\GeoDmsRun.exe %config%\main.dms /Analyses/Create_Centres_Catchments/South_America/Country_Catchments/%%c/store_catchment
+rem )
 pause

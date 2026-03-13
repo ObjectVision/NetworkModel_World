@@ -1,0 +1,482 @@
+container ComputeProxy: Using = "Units;geometries;SourceData;"
+{
+	parameter<s_f>     MaxTraveltime := (60[min_f])[s_f];
+	parameter<km>      Self_Distance := 0.23[km]; //de theoretische gemiddelde 0.23 km die je moet reizen om een random bestemming binnen je eigen 1km grid cel te bereiken. Volgens Lewis.
+	parameter<km>      maxWalkDist   := 1.001[km];
+	parameter<km>      maxCycleDist  := 3.001[km];
+	
+	
+	/* missing countries
+		ZWE Zimbabwe, unclear why it's missing.
+		CHN, Mem alloc failure
+		HKG (Hong Kong, was missing in list)
+		IND Mem alloc failure
+		MAC (Macau, was missing in list)
+		PAK, was missing in list
+		ARUS was missing in list
+		ANR (Andorra, was missing in list)
+		KOS (Kosovo, was missing in list)
+		ERUS was missing in list
+		VCS (Vatican city, was missing in list)
+		USA, Mem alloc failure
+		*/
+	unit<uint32> use_fas_for_origins: nrofrows = 3, descr = "Countries that did not run due to memory allocations (origins cut into multiple smaller units to fix this)" {
+		attribute<string> countrylist: ['CHN', 'IND', 'USA'];
+	}
+	
+	container Per_continent:= for_each_ne(Continents/name, 'T_per_continent('+quote(Continents/name)+')');
+	
+	unit<wpoint> snap_raster_edgar:= /SourceData/adhoc/snapraster_edgar, descr = "raster used to store flows to (WGS84, specifically for the EDGAR project)";
+	unit<ipoint> snap_raster_pop:= /SourceData/population/big_raster, descr = "raster consistent with population grids (Mollweide)";
+	
+	parameter<string> main_dd_func:= 'Geurs_VanEck_2003_general';
+	
+	container export_results {
+		
+		parameter<string> filepath:= '%LocalDataProjDir%/Distances_Travelled_Proxy/'+ModelParameters/PopVersie+'/'+main_dd_func+'/global_results/';
+		parameter<bool>   storebutton:= True, explicitsuppliers = "flows;avnetdi;d_i;pop;netdi_pc;flows_main;flows_secdry;flows_tertry;";
+		attribute<float32> flows 		(snap_raster_edgar):= ='add('+asitemlist('Per_Continent/'+Continents/name+'/Collect_Results/flows')+')', storagename = "= filepath+'flows.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> flows_main 	(snap_raster_edgar):= ='add('+asitemlist('Per_Continent/'+Continents/name+'/Collect_Results/flows_main')+')', storagename = "= filepath+'flows_main.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> flows_secdry (snap_raster_edgar):= ='add('+asitemlist('Per_Continent/'+Continents/name+'/Collect_Results/flows_secdry')+')', storagename = "= filepath+'flows_secdry.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> flows_tertry (snap_raster_edgar):= ='add('+asitemlist('Per_Continent/'+Continents/name+'/Collect_Results/flows_tertry')+')', storagename = "= filepath+'flows_tertry.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> avnetdi 		(snap_raster_pop):= ='add('+asitemlist('Per_Continent/'+Continents/name+'/Collect_Results/avnetdi')+')', storagename = "= filepath+'netdi.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> d_i 			(snap_raster_pop):= ='add('+asitemlist('Per_Continent/'+Continents/name+'/Collect_Results/d_i')+')', storagename = "= filepath+'ai.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> pop 			(snap_raster_pop):= ='add('+asitemlist('Per_Continent/'+Continents/name+'/Collect_Results/pop')+')', storagename = "= filepath+'pop.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> netdi_pc 	(snap_raster_pop):= avnetdi / pop, storagename = "= filepath+'netdi_pc.tif'", storagetype = "gdalwrite.grid";
+	}
+	
+	Template T_per_continent 
+	{
+		parameter<string> Continent_name;
+		
+		container NetworkRef:= ='NetworkSetup/Per_Continent/'+Continent_name+'/NetwerkSpec';
+		
+		
+		unit<uint32> 	   LinkSet_Src	 := NetworkRef/CreateMoreEfficientNetwork/LinkSet_src;
+		unit<uint32>       FinalLinkSet  := NetworkRef/CreateMoreEfficientNetwork/FinalLinkSet_Read;
+		unit<uint32>       FinalNodeSet  := NetworkRef/CreateMoreEfficientNetwork/FinalNodeSet_Read;
+		
+		unit<uint32> od_points:= NetworkRef/DestDomain {
+			attribute<sel_countries>	sel_country_rel:= rlookup(Country_rel, sel_countries/org_rel);
+			attribute<sel_fas>			sel_fas_rel:= rlookup(fa_rel, sel_fas/org_rel);
+			attribute<runzones>			Zones_rel:= makedefined(sel_countries/rz_rel[sel_country_rel], sel_fas/rz_rel[sel_fas_rel]);
+			attribute<FinalNodeSet> 	DestNode_rel:= FinalNodeSet/DestNode_rel;
+			attribute<snap_raster_edgar> grid_rel_edgar:= geometry[snap_raster_edgar];
+			attribute<snap_raster_pop> 	 grid_rel_pop:= org_rel;
+		}
+		unit<uint32> countries:= ='/NetworkSetup/GridPoints_Per_Continent/'+Continent_name+'/Countries' {
+			attribute<bool> use_fas_instead:= isdefined(rlookup(ZoneId, use_fas_for_origins/countrylist));
+		}
+		unit<uint32> fas:= ='/NetworkSetup/GridPoints_Per_Continent/'+Continent_name+'/functional_areas' {
+			attribute<bool> use_fa:= isdefined(rlookup(INT_ISO, use_fas_for_origins/countrylist));
+		}
+		unit<uint32> sel_countries:= select_with_org_rel(!countries/use_fas_instead) {
+			attribute<WorldMollweide> Geometry (poly):= countries/Geometry_MW[org_rel];
+			attribute<string> 	ZoneId:= countries/ZoneId[org_rel];
+			attribute<runzones>	rz_rel:= id(.)[runzones];
+		}
+		unit<uint32> sel_fas:= select_with_org_rel(fas/use_fa) {
+			attribute<WorldMollweide> Geometry (poly):= fas/Geometry_MW[org_rel];
+			attribute<string> 	ZoneId:= fas/ZoneId[org_rel];
+			attribute<runzones> rz_rel:= (#sel_countries + uint32(id(.)))[runzones];
+			attribute<countries> Countries_rel:= fas/Continental_countries_rel[org_rel];
+		}
+		unit<uint32> runzones:= union_unit(sel_countries, sel_fas) {
+			attribute<string>		Label:= id(.) < #sel_countries ? 'country '+ZoneId : 'functional area '+ZoneId;
+			attribute<countries> 	Country_rel:= union_data(., sel_countries/org_rel, sel_fas/Countries_rel);
+			attribute<WorldMollweide> Geometry (poly):= union_data(., sel_countries/Geometry, sel_fas/Geometry);
+			attribute<string> ZoneId:= union_data(., sel_countries/ZoneId, sel_fas/ZoneId);
+			attribute<bool>		rels_check:= id(.) = union_data(., sel_countries/rz_rel, sel_fas/rz_rel);
+		}
+		container country_ODs:= for_each_ne(runzones/ZoneId, 'doZoneSel('+string(id(runzones))+')');
+		container country_proxy:= for_each_ne(runzones/ZoneId, 'getProxyResults(country_ODs/'+runzones/ZoneId+'/Origins_sel, country_ODs/'+runzones/ZoneId+'/Destinations_sel, '+quote(runzones/ZoneId)+')'); 
+		
+		unit<uint32> files_exist:= runzones {
+			attribute<string> code:= ZoneId;
+			attribute<bool> all:= ='union_data(., '+asitemlist('country_proxy/'+ZoneId+'/Results_per_distdecay/'+main_dd_func+'/all_stored')+')';
+		}
+		container collect_results {
+			attribute<float32> flows 		(snap_raster_edgar):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_flows/flow_readonly')+')';
+			attribute<float32> flows_main	(snap_raster_edgar):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_flows/by_category_readonly/Main')+')';
+			attribute<float32> flows_secdry	(snap_raster_edgar):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_flows/by_category_readonly/Secondary')+')';
+			attribute<float32> flows_tertry	(snap_raster_edgar):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_flows/by_category_readonly/Tertiary')+')';
+			attribute<float32> avnetdi 		(snap_raster_pop):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_pop/avnetdi_readonly')+')';
+			attribute<float32> d_i 			(snap_raster_pop):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_pop/D_i_readonly')+')';
+			attribute<float32> pop 			(snap_raster_pop):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_pop/pop_readonly')+')';
+			
+			
+		}
+		
+	}
+	
+	Template doZoneSel {
+		parameter<runzones> inZone;	
+		parameter<uint32> inCountry:= runzones/Country_rel[inZone];
+		
+		unit<uint32> Destinations_sel:= select_with_org_rel(od_points/Country_rel = inCountry && OD_points/Population > 0f && isdefined(od_points/DestNode_rel)), descr = "criterion for destinations" {
+			attribute<uint32>				Zones_rel:= 		od_points/Zones_rel[org_rel];
+			attribute<FinalNodeSet> 		DestNode_rel:= 		od_points/DestNode_rel[org_rel];
+			attribute<BaseProjection> 		Geometry:= 			od_points/Geometry[org_rel];
+			attribute<float32>				Population:= 		od_points/Population[org_rel];
+			attribute<snap_raster_edgar> 	grid_rel_edgar:= 	od_points/grid_rel_edgar[org_rel];
+			attribute<snap_raster_pop> 		grid_rel_pop:= 		od_points/grid_rel_pop[org_rel];
+		}
+		unit<uint32> Origins_sel:= select_with_org_rel(Destinations_sel/Zones_rel = inZone), descr = "criterion for origins (may deviate from destinations)" {
+			attribute<FinalNodeSet> DestNode_rel:= Destinations_sel/DestNode_rel[org_rel];
+			attribute<BaseProjection> Geometry:= Destinations_sel/Geometry[org_rel];
+			attribute<float32>		Population:= Destinations_sel/Population[org_rel];
+			attribute<snap_raster_edgar> 	grid_rel_edgar:= 	Destinations_sel/grid_rel_edgar[org_rel];
+			attribute<snap_raster_pop> 		grid_rel_pop:= 		Destinations_sel/grid_rel_pop[org_rel];
+		}
+		
+	}
+	
+	Template getProxyResults {
+		
+		unit<uint32>       in_origin_points;
+		unit<uint32>       in_destination_points;
+		parameter<string> 	   region_name;
+		//unit<uint32>       Origins       := NetworkSetup/Base_Analysis/NetwerkSpec/DestDomain;
+		//unit<uint32>       Destinations  := NetworkSetup/Base_Analysis/NetwerkSpec/DestDomain;
+		
+		
+		unit<uint64> Matrix :=
+			dijkstra_m64('bidirectional(link_flag);startPoint(Node_rel);endPoint(Node_rel);cut(OrgZone_max_imp);alternative(link_imp):alt_imp;od:OrgZone_rel,DstZone_rel,impedance'
+				, FinalLinkSet/impedance
+				, FinalLinkSet/F1
+				, FinalLinkSet/F2
+				///
+				, !FinalLinkSet/IsOneDirection
+				, in_origin_points/DestNode_rel
+				, in_destination_points/DestNode_rel
+				, MaxTraveltime
+				, FinalLinkSet/LengthKm
+			)
+		{
+			attribute<min_f>        Minutes  	:= impedance[min_f];
+			attribute<in_origin_points>  i      := OrgZone_rel; //origin id
+			attribute<in_destination_points>  j := DstZone_rel; //destination id
+			attribute<bool>         self     	:= point_isNearBy(in_origin_points/Geometry[i], in_destination_points/Geometry[j], 1.0d); //Is OD-pair pair of itself
+			attribute<float32>       Pi      	:= in_origin_points/Population[i];  //Population in origin
+			attribute<float32>       Pj       	:= in_destination_points/Population[j]; //Population in destination
+			attribute<min_f>        Mij      	:= self ? convert(Self_Distance / ModelParameters/Advanced/CarDefaultSpeed_low, min_f) : Minutes;
+			attribute<km>           Net_Dij  	:= self ? Self_Distance : alt_imp;
+			attribute<km>           EUCL_Dij 	:= self ? Self_Distance : dist(in_origin_points/geometry[i], in_destination_points/geometry[j])[km];
+		}
+		container Results_per_distdecay:=
+			for_each_ne(
+				distdecay_functions/LabelText
+				, 'Calc_perDecayFunction_T_OV('+string(id(distdecay_functions))+'[distdecay_functions])'
+			);
+	}
+	Template Do_MergeProxies_T
+	{
+		parameter<distdecay_functions> infunc;
+		
+		unit<uint32> mergeProxy:= = 'union_unit(Results_per_distdecay/'+distdecay_functions/LabelText[infunc]+'/revert_to_od_points)'
+		, storagename = "='%LocalDataProjDir%/travel_proxy/mozaiks/'+distdecay_functions/LabelText[infunc]+'.shp'"
+		, storagetype = "gdalwrite.vect"
+		{
+			attribute<LambertEA> geometry := = 'union_data(.,Results_per_distdecay/'+distdecay_functions/LabelText[infunc]+'/revert_to_od_points/geometry)';
+			attribute<float32>   Pop      := = 'union_data(.,Results_per_distdecay/'+distdecay_functions/LabelText[infunc]+'/revert_to_od_points/population[float32])';
+			attribute<float32>   Ai       := = 'union_data(.,Results_per_distdecay/'+distdecay_functions/LabelText[infunc]+'/revert_to_od_points/Ai)';
+			attribute<float32>   avnetdi  := = 'union_data(.,Results_per_distdecay/'+distdecay_functions/LabelText[infunc]+'/revert_to_od_points/avnetdi)';
+			attribute<float32>   aveucdi  := = 'union_data(.,Results_per_distdecay/'+distdecay_functions/LabelText[infunc]+'/revert_to_od_points/aveucdi)';
+			attribute<float32>   avtimei  := = 'union_data(.,Results_per_distdecay/'+distdecay_functions/LabelText[infunc]+'/revert_to_od_points/avtimei)';
+		}
+	}
+	unit<uint32> distdecay_functions: NrOfRows = 6 
+	{
+		attribute<string> LabelText : 	['Geurs_VanEck_2003_general'
+											, 'logistic_steep'
+											, 'logistic_slight'
+											, 'Power_m10'
+											, 'Power_m15'
+											, 'Power_m20'
+										];
+		attribute<string> eval      : 	['(1d / (1d + exp(-6.899d + (2.326d * log(Mij[float64])))))'
+											, '(1d / (1d + exp(-4d + (2.337666667d * log(Mij[float64])))))'
+											, '(1d / (1d + exp(-8d + (2.337666667d * log(Mij[float64])))))'
+											, '(Mij^-1d)'
+											, '(Mij^-1.5d)'
+											, '(Mij^-2d)'
+										];
+		attribute<float64>    alpha     :	[ -6.899 // OV-specific parameters
+											,-4
+											, -8
+											, 0
+											, 0
+											, 0
+										];
+		attribute<float64>    beta      :	[ 2.326
+											, 2.337666667
+											, 2.337666667
+											, 0
+											, 0
+											, 0
+										];
+		attribute<float64>    gamma      :	[ 0
+											, 0
+											, 0
+											, 0
+											, 0
+											, 0
+										];
+		attribute<float64>    γ          :	[ 0
+											, 0
+											, 0
+											, -1
+											, -1.5
+											, -2
+										];
+		attribute<bool>    IsLogLogisticDecay :	[ TRUE
+											, TRUE
+											, TRUE
+											, FALSE
+											, FALSE
+											, FALSE
+										];
+										
+						
+	}
+} 
+
+/***************** OV functions, Fij integrated in matrix*/
+Template Calc_perDecayFunction_T_OV
+{
+	parameter<distdecay_functions> infunc;
+	///
+	
+	parameter<float64>    alpha := distdecay_functions/alpha[infunc];
+	parameter<float64>    beta  := distdecay_functions/beta[infunc];
+	parameter<float64>    gamma := distdecay_functions/gamma[infunc];
+	parameter<float64>    γ     := distdecay_functions/γ[infunc];
+	
+	parameter<bool>       IsLogLogisticDecay := distdecay_functions/IsLogLogisticDecay[infunc];
+	
+	unit<uint64> LogLogisticDecay := 
+		impedance_matrix_od64('bidirectional(link_flag);startPoint(Node_rel);endPoint(Node_rel);cut(OrgZone_max_imp);alternative(link_imp):alt_imp;interaction(v_i,w_j,dist_logit(alpha,beta,gamma),OrgZone_alpha):D_i,M_ix,C_j,M_xj,Link_flow;od:impedance,OrgZone_rel,DstZone_rel'
+			, FinalLinkSet/impedance
+			, FinalLinkSet/F1
+			, FinalLinkSet/F2
+			///
+			, !FinalLinkSet/IsOneDirection
+			, in_origin_points/DestNode_rel
+			, in_destination_points/DestNode_rel
+			, MaxTraveltime                  // cut orgzone_max_imp
+			, FinalLinkSet/LengthKm          // link_imp
+			
+			, float64(in_origin_points/Population)  // v_i
+			, float64(in_destination_points/Population) // w_j
+			, alpha
+			, beta
+			, gamma
+			, 0d //OrgZone_alpha, dit is 0 want org is inelastisch, dwz I_ij := v_i * w_j * t_ij / (SUM k: w_j*t_kj)
+		);
+	
+	unit<uint64> NormalDecay :=
+		impedance_matrix_od64('bidirectional(link_flag);startPoint(Node_rel);endPoint(Node_rel);cut(OrgZone_max_imp);alternative(link_imp):alt_imp;interaction(v_i,w_j,dist_decay,OrgZone_alpha):D_i,M_ix,C_j,M_xj,Link_flow;od:impedance,OrgZone_rel,DstZone_rel'
+			, FinalLinkSet/impedance
+			, FinalLinkSet/F1
+			, FinalLinkSet/F2
+			///
+			, !FinalLinkSet/IsOneDirection
+			, in_origin_points/DestNode_rel
+			, in_destination_points/DestNode_rel
+			, MaxTraveltime
+			, FinalLinkSet/LengthKm
+			
+			, float64(in_origin_points/Population)  // v_i
+			, float64(in_destination_points/Population) // w_j
+			, γ
+			, 0d //OrgZone_alpha, dit is 0 want org is inelastisch, dwz I_ij := v_i * w_j * t_ij / (SUM k: w_j*t_kj)
+		);
+	
+	unit<uint64> Matrix:= =IsLogLogisticDecay ? 'LogLogisticDecay' : 'NormalDecay'
+	{
+		// attribute<min_f>        Minutes  := impedance[min_f];
+		// attribute<Origins>      i        := OrgZone_rel; //origin id
+		// attribute<Destinations> j        := DstZone_rel; //destination id
+		// attribute<bool>         self               := Origins/id_rel[i] = Destinations/id_rel[j]; //Is OD-pair pair of itself
+		// attribute<uint32>       v_i                := Origins/Population[i];  //Population in origin aka Pi
+		// attribute<uint32>       w_j                := Destinations/Population[j]; //Population in destination  aka Pj
+		// attribute<min_f>        d_ij               := self ? convert(Self_Distance / ModelParameters/Advanced/CarDefaultSpeed_low, min_f) : Minutes;  //aka Mij
+		// attribute<km>           Net_d_ij           := self ? Self_Distance : alt_imp;
+		// attribute<km>           EUCL_d_ij          := self ? Self_Distance : dist(Origins/geometry[i], Destinations/geometry[j])[km];
+		// attribute<min_f>        t_ij               := = distdecay_functions/eval[infunc];             // decayed traveltime from origin to destination  Fij
+		// attribute<float64>      D_i (Origins)      := sum(w_j[float64] * t_ij, i);                      // potential accessibility to destination population aka Ai
+		// attribute<float64>      C_j (Destinations) := sum(v_i[float64] * t_ij, j);                      // potential accessibility to origin population   Aj
+		
+		attribute<float64> Tij               := (1d / D_i[OrgZone_rel]) * (in_origin_points/Population[OrgZone_rel])[float64] * (in_destination_points/Population[DstZone_rel])[float64] * impedance; // Estimated number of trips from i to j
+		attribute<km>	EUCL_d_ij 			 := convert(dist(in_origin_points/Geometry[OrgZone_rel], in_destination_points/Geometry[DstZone_rel])[m], km);
+		
+		// attribute<float64> WALKij            := float64(Net_Dij < maxWalkDist);                 // is network distance walkable?
+		// attribute<float64> CYCLij            := float64(Net_Dij < maxCycleDist);                // is network distance bikeable?
+	}
+	
+	
+	/// =================================
+	/// ====== EXPORT ============
+	/// =================================
+	
+	parameter<string> filepath:= '%LocalDataProjDir%/Distances_Travelled_Proxy/'+ModelParameters/PopVersie+'/'+distdecay_functions/LabelText[infunc]+'/'+Continent_name+'/'+region_name;
+	
+	container Exports
+	{
+		attribute<float32>   Population      (in_origin_points) := in_origin_points/Population[float32];
+		//attribute<inOD_points>   origin_id       (OD_points) := rlookup(OD_points/Org_id_rel, value(Origins/id_rel, uint32));
+		
+		attribute<float32>   D_i             (in_origin_points) := MakeDefined(float32(Matrix/D_i), 0f);
+		
+		attribute<float64>   AvgNetDistance    (in_origin_points) := sum(Matrix/Tij * Matrix/alt_imp[float64], Matrix/OrgZone_rel);
+		attribute<float32>   avnetdi         (in_origin_points) := MakeDefined(float32(AvgNetDistance) / Population[float32], 0f);
+		
+		attribute<float64>   AvgEUCLDistance   (in_origin_points) := sum(Matrix/Tij * Matrix/EUCL_d_ij, Matrix/OrgZone_rel);
+		attribute<float32>   aveucdi         (in_origin_points) := MakeDefined(float32(AvgEUCLDistance) / Population[float32], 0f);
+		
+		attribute<min_f>     AvgTime           (in_origin_points) := sum(Matrix/Tij * Matrix/impedance, Matrix/OrgZone_rel)[min_f];
+		attribute<float32>   avtimei         (in_origin_points) := MakeDefined(float32(AvgTime) / Population[float32], 0f);
+		
+		attribute<float64>  LinkFlow_Write (FinalLinkSet):= Matrix/Link_flow, storagename = "= filepath+'/finallinkset_flows.fss'";
+		attribute<float64>  LinkFlow_Read  (FinalLinkSet): storagename = "= propvalue(LinkFlow_Write, 'storagename')", storagereadonly = "True";
+		attribute<float64>  LinkFlow_links_in (LinkSet_Src):= LinkFlow_Read[NetworkRef/CreateMoreEfficientNetwork/ChangesTracker_Read/FinalLinkSet_rel];
+	}
+	container flows_to_grid {
+		unit<uint32> Roads:= select(!LinkSet_Src/IsOD_connection_road && isdefined(Exports/LinkFlow_links_in)) {
+			attribute<BaseProjection> geometry (arc):= collect_by_cond(., !LinkSet_Src/IsOD_connection_road && isdefined(Exports/LinkFlow_links_in), LinkSet_Src/geometry)[BaseProjection];
+			attribute<Classifications/OSM/MainRoadClasses> MRC_rel:= collect_by_cond(., !LinkSet_Src/IsOD_connection_road && isdefined(Exports/LinkFlow_links_in), LinkSet_Src/MRC_rel);
+			attribute<float64> flows:= collect_by_cond(., !LinkSet_Src/IsOD_connection_road && isdefined(Exports/LinkFlow_links_in), Exports/LinkFlow_links_in);
+		}
+		container lines_to_grid:= lines_grid_constructor(25d, Roads, Roads/geometry);
+	}
+	unit<ipoint> exportgrid_pop:= snap_raster_pop {
+		attribute<in_origin_points> org_rel:= invert(in_origin_points/grid_rel_pop);
+		attribute<float32> D_i:= makedefined(Exports/D_i[org_rel], 0f), storagename = "= filepath+'/pot_ai.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> avnetdi:= makedefined(float32(Exports/AvgNetDistance[org_rel]), 0f), storagename = "= filepath+'/av_di.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> pop:= makedefined(Exports/Population[org_rel], 0f), storagename = "= filepath+'/pop.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> D_i_readonly: storagename = "= propvalue(D_i, 'storagename')", storagetype = "gdal.grid", storagereadonly = "true";
+		attribute<float32> avnetdi_readonly: storagename = "= propvalue(avnetdi, 'storagename')", storagetype = "gdal.grid", storagereadonly = "true";
+		attribute<float32> pop_readonly: storagename = "= propvalue(pop, 'storagename')", storagetype = "gdal.grid", storagereadonly = "true";
+	}
+	unit<wpoint> exportgrid_flows:= snap_raster_edgar {
+		attribute<in_origin_points> org_rel:= invert(in_origin_points/grid_rel_edgar);
+		attribute<float32> flow:= flows_to_grid/lines_to_grid/flow[float32], storagename = "= filepath+'/flow.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> flow_readonly: storagename = "= propvalue(flow, 'storagename')", storagetype = "gdal.grid", storagereadonly = "true";
+		
+		container by_category:= for_each_nedvat(flows_to_grid/lines_to_grid/catg/label, 
+			'flows_to_grid/lines_to_grid/per_category/'+flows_to_grid/lines_to_grid/catg/label+'[float32]', exportgrid_flows, float32, filepath+'/flow_'+flows_to_grid/lines_to_grid/catg/label+'.tif', 'gdalwrite.grid');
+		
+		container by_category_readonly:= for_each_ndvat(flows_to_grid/lines_to_grid/catg/label, 
+			exportgrid_flows, float32, filepath+'/flow_'+flows_to_grid/lines_to_grid/catg/label+'.tif', 'gdal.grid');
+	}
+	parameter<bool> store1:= True, explicitsuppliers = "Exports/LinkFlow_Write;exportgrid_pop/D_i;exportgrid_pop/avnetdi;exportgrid_pop/pop;";
+	parameter<bool> store2:= True, explicitsuppliers = "exportgrid_flows/flow;exportgrid_flows/by_category;";
+	
+	parameter<bool> stored_access:= ='strlen('+quote(ExistingFile('', filepath+'/pot_ai.tif'))+') > 0';
+	parameter<bool> stored_dists:= 	='strlen('+quote(ExistingFile('', filepath+'/av_di.tif'))+') > 0';
+	parameter<bool> stored_pop:= 	='strlen('+quote(ExistingFile('', filepath+'/pop.tif'))+') > 0';
+	parameter<bool> stored_flows:= 	='strlen('+quote(ExistingFile('', filepath+'/flow.tif'))+') > 0';
+	
+	parameter<bool> all_stored:= stored_access && stored_dists && stored_flows;
+	
+}//*/
+Template lines_grid_constructor {
+	parameter<float64> sample_res;
+	unit<uint32> in_set;
+	attribute<BaseProjection> lines_to_sample (in_set, arc);
+	unit<uint32> catg:= Classifications/OSM/MainRoadClasses;
+	unit<uint32> segments:= arc2segm(lines_to_sample) {
+		attribute<float64> length_km:= dist(point[WebMercator], nextpoint[WebMercator])[float64] / 1000d;
+		attribute<float64> flows_pkm:= in_set/flows[Sequence_rel] * length_km;
+		attribute<catg>	   catg_rel:= in_set/MRC_rel[Sequence_rel];
+		attribute<uint32>  nsamples:= pcount(samples/Sequence_rel);
+	}
+	unit<uint32> samples:= dyna_point_with_ends(segments/point, segments/nextpoint, sample_res) {
+		attribute<exportgrid_flows> grid_rel:= point[exportgrid_flows];
+		attribute<float64> 	weighted_flowspkm:= (segments/flows_pkm / float64(segments/nsamples))[Sequence_rel];
+		attribute<catg>		catg_rel:= segments/catg_rel[Sequence_rel];
+	}
+	attribute<float64> flow (exportgrid_flows):= sum(samples/weighted_flowspkm, samples/grid_rel);
+	
+	container per_category:= for_each_nedv(catg/label, 'sum(samples/weighted_flowspkm * float64(samples/catg_rel == catg/V/'+catg/label+'), samples/grid_rel)', exportgrid_flows, float64);
+	
+}
+/* version made by Chris Jacobs-Crisioni (no auto-function trip distribution) 
+Template Calc_perDecayFunction_T_CJC
+{
+	unit<uint64> inMatrix;
+	parameter<distdecay_functions> infunc;
+	
+	unit<uint64> Matrix:= inMatrix 
+	{
+		attribute<float64> Fij               := = distdecay_functions/eval[infunc];             // decayed traveltime from origin to destination
+		attribute<float64> Ai (inOD_points)  := sum(Pj[float64] * Fij, i);                      // potential accessibility to destination population
+		attribute<float64> Aj (inOD_points)  := sum(Pi[float64] * Fij, j);                      // potential accessibility to origin population
+		attribute<float64> Tij               := (1d / Ai[i]) * Pi[float64] * Pj[float64] * Fij; // Estimated number of trips from i to j
+		attribute<float64> WALKij            := float64(Net_Dij < maxWalkDist);                 // is network distance walkable?
+		attribute<float64> CYCLij            := float64(Net_Dij < maxCycleDist);                // is network distance bikeable?
+	}
+	
+	unit<uint32> PerOrigin := inOD_points
+	{
+		attribute<min_f>   AvgTime         := sum(Matrix/Tij * Matrix/Mij, Matrix/i)[min_f];
+		attribute<km>      AvgNetDistance  := sum(Matrix/Tij * Matrix/Net_Dij, Matrix/i);
+		attribute<km>      AvgEUCLDistance := sum(Matrix/Tij * Matrix/Net_Dij, Matrix/i);
+		attribute<float64> ACCi            := Matrix/Ai;
+		attribute<km>      max_Net_Di      := max(Matrix/Net_Dij, Matrix/i);
+		attribute<km>      max_EUCL_Di     := max(Matrix/EUCL_Dij, Matrix/i);
+		attribute<float64> PotWalk         := sum(Matrix/Tij * Matrix/WALKij, Matrix/i);
+		attribute<float64> PotCycle        := sum(Matrix/Tij * Matrix/CYCLij, Matrix/i);
+	}
+	
+	unit<uint32> PerDestination := inOD_points
+	{
+		attribute<float64> visits         := sum(Matrix/Tij, Matrix/j);
+		attribute<float64> ACCj           := Matrix/Aj; 
+		attribute<float64> AvgTime        := sum(Matrix/Tij * Matrix/Mij, Matrix/j) / visits;
+		attribute<float64> AvgNetDistance := sum(Matrix/Tij * Matrix/Net_Dij, Matrix/j) / visits;
+	}
+	
+	unit<uint32> StoreOriginResults:= PerOrigin
+	, storagename = "='%LocalDataProjDir%/travel_proxy/region_origin_results/'+region_name+'/'+distdecay_functions/LabelText[infunc]+'.dbf'"
+	, storagetype = "gdalwrite.vect"
+	{
+		attribute<.>        orgid     := id(.);
+		attribute<float64>  ai        := ACCi;
+		attribute<float64>  avtime    := AvgTime;
+		attribute<float64>  avnetd    := AvgNetDistance;
+		attribute<float64>  aveucd    := AvgEUCLDistance;
+		attribute<float64>  fracwalk  := PotWalk;
+		attribute<float64>  fraccycle := PotCycle;
+	}
+	
+	unit<uint32> StoreDestinationResults:= PerDestination
+	 , storagename = "= '%LocalDataProjDir%/travel_proxy/region_destination_results/'+region_name+'/'+distdecay_functions/LabelText[infunc]+'.dbf'"
+	 , storagetype = "gdalwrite.vect"
+	{
+		attribute<.>        orgid     := id(.);
+		attribute<float64>  aj        := ACCj;
+		attribute<float64>  avtime    := AvgTime;
+		attribute<float64>  avnetd    := AvgNetDistance;
+		attribute<float64>  visits    := PerDestination/visits;
+		attribute<uint32>   attract   := PerDestination/Population;
+	}
+	
+	unit<uint32> Origin_Results_ReadOnly      : storagename = "= propvalue(StoreOriginResults, 'storagename')", storagetype = "gdal.vect", storagereadonly = "True";
+	unit<uint32> Destination_Results_ReadOnly : storagename = "= propvalue(StoreDestinationResults, 'storagename')", storagetype = "gdal.vect", storagereadonly = "True";
+	
+	unit<uint32> revert_to_od_points:= OD_points 
+	{
+		attribute<Origin_Results_ReadOnly>      or_id     := rlookup(OD_points/OrgDomain_rel, value(Origin_Results_ReadOnly/orgid, uint32));
+		attribute<Destination_Results_ReadOnly> dr_id     := rlookup(OD_points/DestDomain_rel, value(Destination_Results_ReadOnly/orgid, uint32));
+		attribute<float32>                      ai        := MakeDefined(float32(Origin_Results_ReadOnly/ai[or_id]), 0f);
+		attribute<float32>                      avtimei   := MakeDefined(float32(Origin_Results_ReadOnly/avtime[or_id]) / Population[float32], 0f);
+		attribute<float32>                      avnetdi   := MakeDefined(float32(Origin_Results_ReadOnly/avnetd[or_id]) / Population[float32], 0f);
+		attribute<float32>                      aveucdi   := MakeDefined(float32(Origin_Results_ReadOnly/aveucd[or_id]) / Population[float32], 0f);
+		attribute<float32>                      avtimej   := MakeDefined(float32(Destination_Results_ReadOnly/avtime[dr_id]) / Population[float32], 0f);
+		attribute<float32>                      avnetdj   := MakeDefined(float32(Destination_Results_ReadOnly/avnetd[dr_id]) / Population[float32], 0f);
+		attribute<float32>                      fracwalki := MakeDefined(float32(Origin_Results_ReadOnly/fracwalk[or_id]) / Population[float32], 0f);
+		attribute<float32>                      fracyclei := MakeDefined(float32(Origin_Results_ReadOnly/fraccycle[or_id]) / Population[float32], 0f);
+	}
+}   
+*/

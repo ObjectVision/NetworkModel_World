@@ -3,7 +3,7 @@ set config=D:\ProjDir\NetworkModel_World\cfg
 set geodmsversion=GeoDMS18.1.2
 
 rem set continentlist=Africa Asia Australia_Oceania Europe North_America South_America
-set continentlist=Africa Asia Australia_Oceania Europe South_America
+set continentlist=Africa Asia Europe North_America
 
 for %%c in (%continentlist%) do (
 echo Running network generation for %%c
