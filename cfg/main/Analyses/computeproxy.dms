@@ -26,8 +26,10 @@ container ComputeProxy: Using = "Units;geometries;SourceData;"
 	
 	container Per_continent:= for_each_ne(Continents/name, 'T_per_continent('+quote(Continents/name)+')');
 	
-	unit<wpoint> snap_raster_edgar:= /SourceData/adhoc/snapraster_edgar, descr = "raster used to store flows to (WGS84, specifically for the EDGAR project)";
+	unit<ipoint> snap_raster_edgar:= /SourceData/adhoc/snapraster_edgar, descr = "raster used to store flows to (WGS84, specifically for the EDGAR project)";
 	unit<ipoint> snap_raster_pop:= /SourceData/population/big_raster, descr = "raster consistent with population grids (Mollweide)";
+	
+	parameter<float64> sampling_resolution:= pointcol(GetProjectionFactor(snap_raster_edgar)) / 10d;
 	
 	parameter<string> main_dd_func:= 'Geurs_VanEck_2003_general';
 	
@@ -96,7 +98,8 @@ container ComputeProxy: Using = "Units;geometries;SourceData;"
 			attribute<bool> all:= ='union_data(., '+asitemlist('country_proxy/'+ZoneId+'/Results_per_distdecay/'+main_dd_func+'/all_stored')+')';
 		}
 		container collect_results {
-			attribute<float32> flows 		(snap_raster_edgar):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_flows/flow_readonly')+')';
+			attribute<float32> flows 		(snap_raster_edgar):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_flows/flow_readonly')+')',
+				storagename ="= '%LocalDataProjDir%/Distances_Travelled_Proxy/'+ModelParameters/PopVersie+'/'+main_dd_func+'/'+Continent_name+'/flows.tif'", storagetype = "gdalwrite.grid";
 			attribute<float32> flows_main	(snap_raster_edgar):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_flows/by_category_readonly/Main')+')';
 			attribute<float32> flows_secdry	(snap_raster_edgar):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_flows/by_category_readonly/Secondary')+')';
 			attribute<float32> flows_tertry	(snap_raster_edgar):= ='add('+asitemlist('country_proxy/'+runzones/ZoneId+'/Results_per_distdecay/'+main_dd_func+'/exportgrid_flows/by_category_readonly/Tertiary')+')';
@@ -347,7 +350,7 @@ Template Calc_perDecayFunction_T_OV
 			attribute<Classifications/OSM/MainRoadClasses> MRC_rel:= collect_by_cond(., !LinkSet_Src/IsOD_connection_road && isdefined(Exports/LinkFlow_links_in), LinkSet_Src/MRC_rel);
 			attribute<float64> flows:= collect_by_cond(., !LinkSet_Src/IsOD_connection_road && isdefined(Exports/LinkFlow_links_in), Exports/LinkFlow_links_in);
 		}
-		container lines_to_grid:= lines_grid_constructor(25d, Roads, Roads/geometry);
+		container lines_to_grid:= lines_grid_constructor(sampling_resolution, Roads, Roads/geometry);
 	}
 	unit<ipoint> exportgrid_pop:= snap_raster_pop {
 		attribute<in_origin_points> org_rel:= invert(in_origin_points/grid_rel_pop);
@@ -358,9 +361,9 @@ Template Calc_perDecayFunction_T_OV
 		attribute<float32> avnetdi_readonly: storagename = "= propvalue(avnetdi, 'storagename')", storagetype = "gdal.grid", storagereadonly = "true";
 		attribute<float32> pop_readonly: storagename = "= propvalue(pop, 'storagename')", storagetype = "gdal.grid", storagereadonly = "true";
 	}
-	unit<wpoint> exportgrid_flows:= snap_raster_edgar {
+	unit<ipoint> exportgrid_flows:= snap_raster_edgar {
 		attribute<in_origin_points> org_rel:= invert(in_origin_points/grid_rel_edgar);
-		attribute<float32> flow:= flows_to_grid/lines_to_grid/flow[float32], storagename = "= filepath+'/flow.tif'", storagetype = "gdalwrite.grid";
+		attribute<float32> flow:= flows_to_grid/lines_to_grid/flow[float32], storagename = "= filepath+'/100m/flow.tif'", storagetype = "gdalwrite.grid";
 		attribute<float32> flow_readonly: storagename = "= propvalue(flow, 'storagename')", storagetype = "gdal.grid", storagereadonly = "true";
 		
 		container by_category:= for_each_nedvat(flows_to_grid/lines_to_grid/catg/label, 
@@ -371,6 +374,7 @@ Template Calc_perDecayFunction_T_OV
 	}
 	parameter<bool> store1:= True, explicitsuppliers = "Exports/LinkFlow_Write;exportgrid_pop/D_i;exportgrid_pop/avnetdi;exportgrid_pop/pop;";
 	parameter<bool> store2:= True, explicitsuppliers = "exportgrid_flows/flow;exportgrid_flows/by_category;";
+	parameter<bool> store_only_all_flows:= True, explicitsuppliers = "exportgrid_flows/flow;";
 	
 	parameter<bool> stored_access:= ='strlen('+quote(ExistingFile('', filepath+'/pot_ai.tif'))+') > 0';
 	parameter<bool> stored_dists:= 	='strlen('+quote(ExistingFile('', filepath+'/av_di.tif'))+') > 0';

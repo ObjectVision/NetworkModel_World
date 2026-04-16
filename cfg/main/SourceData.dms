@@ -237,7 +237,7 @@ container SourceData: Using = "Units;Classifications;geometries"
 		}
 	}
 	container adhoc {
-		unit<wpoint> snapraster_edgar: storagename = "%NetworkModelWorld_DataDir%/adhoc/edgar_snap_raster_1km.tif", StorageReadOnly = "true", StorageType = "gdal.grid", dialogdata = "WGS84" {
+		unit<ipoint> snapraster_edgar: storagename = "%NetworkModelWorld_DataDir%/adhoc/built_s_wgs84_v1.tif", StorageReadOnly = "true", StorageType = "gdal.grid", dialogdata = "WGS84" {
 			attribute<uint32> GridData;
 		}
 	}

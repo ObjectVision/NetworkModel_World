@@ -2,30 +2,13 @@ heads/main
 On branch main
 Your branch is up to date with 'origin/main'.
 
-All conflicts fixed but you are still merging.
-  (use "git commit" to conclude merge)
-
-Changes to be committed:
-	modified:   cfg/main/Analyses.dms
-	new file:   cfg/main/Analyses/road_lengths.dms
-	modified:   cfg/main/SourceData/RegionalUnits.dms
-
 Changes not staged for commit:
   (use "git add <file>..." to update what will be committed)
   (use "git restore <file>..." to discard changes in working directory)
-	modified:   batch/gen_catchments.cmd
-	modified:   batch/gen_continental_networks.cmd
-	modified:   batch/gen_functional_areas.cmd
-	modified:   cfg/main/Analyses.dms
-	modified:   cfg/main/Analyses/functional_rural_areas.dms
-	modified:   cfg/main/Analyses/road_lengths.dms
-	modified:   cfg/main/SourceData/RegionalUnits.dms
+	modified:   batch/compute_proxy.cmd
+	modified:   cfg/main/Analyses/computeproxy.dms
+	modified:   cfg/main/SourceData.dms
 	modified:   git.txt
 
-Untracked files:
-  (use "git add <file>..." to include in what will be committed)
-	batch/compute_proxy.cmd
-	cfg/main/Analyses/computeproxy.dms
-	cfg/main/Analyses/count_functional_rural_areas.dms
-
-fc0cc176eee9c53c43cf28b2cb69036f1e11a7d7
+no changes added to commit (use "git add" and/or "git commit -a")
+273ad76cc71aefecb924d7812b131b4f281968a5
